@@ -1,0 +1,208 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import '../models/models.dart';
+import '../services/api_service.dart';
+import 'consultation_screen.dart';
+
+class AppointmentsScreen extends StatefulWidget {
+  const AppointmentsScreen({super.key});
+
+  @override
+  State<AppointmentsScreen> createState() => _AppointmentsScreenState();
+}
+
+class _AppointmentsScreenState extends State<AppointmentsScreen> {
+  List<Appointment> _appointments = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    try {
+      final list = await ApiService.getAppointments();
+      setState(() => _appointments = list..sort((a, b) => b.fechaHora.compareTo(a.fechaHora)));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Color _estadoColor(String estado) {
+    switch (estado) {
+      case 'programada': return Colors.blue;
+      case 'completada': return Colors.green;
+      case 'cancelada': return Colors.red;
+      default: return Colors.grey;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Mis Citas'),
+        backgroundColor: const Color(0xFF1976D2),
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _load),
+        ],
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _appointments.isEmpty
+              ? const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.calendar_today_outlined, size: 64, color: Colors.grey),
+                      SizedBox(height: 16),
+                      Text('No tienes citas aún',
+                          style: TextStyle(fontSize: 18, color: Colors.grey)),
+                      SizedBox(height: 8),
+                      Text('Busca un médico y agenda tu primera consulta',
+                          style: TextStyle(color: Colors.grey)),
+                    ],
+                  ),
+                )
+              : RefreshIndicator(
+                  onRefresh: _load,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _appointments.length,
+                    itemBuilder: (_, i) {
+                      final apt = _appointments[i];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      'Cita #${apt.id}',
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold, fontSize: 16),
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: _estadoColor(apt.estado).withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      apt.estado.toUpperCase(),
+                                      style: TextStyle(
+                                          color: _estadoColor(apt.estado),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    DateFormat('dd/MM/yyyy HH:mm').format(apt.fechaHora),
+                                    style: const TextStyle(color: Colors.grey),
+                                  ),
+                                ],
+                              ),
+                              if (apt.notas.isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                const Divider(),
+                                const Text('Notas del médico:',
+                                    style: TextStyle(fontWeight: FontWeight.w600)),
+                                Text(apt.notas, style: const TextStyle(fontSize: 13)),
+                              ],
+                              if (apt.receta.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                const Text('Receta:',
+                                    style: TextStyle(fontWeight: FontWeight.w600)),
+                                Text(apt.receta,
+                                    style: const TextStyle(fontSize: 13, color: Colors.green)),
+                              ],
+                              if (apt.estado == 'programada') ...[
+                                const SizedBox(height: 12),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    icon: const Icon(Icons.video_call, color: Colors.white),
+                                    label: const Text('Entrar a la consulta',
+                                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                    onPressed: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => ConsultationScreen(appointmentId: apt.id),
+                                      ),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF2ecc71),
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8)),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    icon: const Icon(Icons.cancel_outlined, color: Colors.red),
+                                    label: const Text('Cancelar cita',
+                                        style: TextStyle(color: Colors.red)),
+                                    onPressed: () => _cancelar(apt.id),
+                                    style: OutlinedButton.styleFrom(
+                                        side: const BorderSide(color: Colors.red)),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+    );
+  }
+
+  Future<void> _cancelar(int id) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Cancelar cita'),
+        content: const Text('¿Estás seguro de que deseas cancelar esta cita?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('No')),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Sí, cancelar', style: TextStyle(color: Colors.white))),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ApiService.cancelAppointment(id);
+      _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+}

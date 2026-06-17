@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="SaludEnLínea — Tu doctor en el bolsillo">
+  <meta name="theme-color" content="#1976D2">
+
+  <!-- iOS -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="SaludEnLínea">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <link rel="icon" type="image/png" href="favicon.png"/>
+  <title>SaludEnLínea</title>
+  <link rel="manifest" href="manifest.json">
+
+  <!-- VERSION: se actualiza con cada build para invalidar el service worker -->
+  <meta name="app-version" content="__APP_VERSION__">
+</head>
+<style>
+  #google-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 9999;
+    background: linear-gradient(135deg, #1a3a5c 0%, #0d2338 100%);
+    flex-direction: column; align-items: center; justify-content: center;
+    font-family: 'Segoe UI', Arial, sans-serif;
+  }
+  #google-overlay.visible { display: flex; }
+  #google-overlay .logo { font-size: 56px; color: #2ecc71; margin-bottom: 8px; }
+  #google-overlay h1 { color: #fff; font-size: 28px; margin: 0 0 4px; }
+  #google-overlay p  { color: #aaa; font-size: 14px; margin: 0 0 36px; }
+  #google-overlay .card {
+    background: #fff; border-radius: 16px; padding: 36px 40px;
+    text-align: center; width: 320px; box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  #google-overlay .card h2 { color: #1a3a5c; font-size: 20px; margin: 0 0 6px; }
+  #google-overlay .card small { color: #888; font-size: 12px; display: block; margin-bottom: 24px; }
+  .btn-google {
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    width: 100%; padding: 13px 20px; border-radius: 8px; border: 2px solid #e0e0e0;
+    background: #fff; color: #333; font-size: 15px; font-weight: 600;
+    cursor: pointer; text-decoration: none; transition: box-shadow 0.2s;
+  }
+  .btn-google:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.15); border-color: #bbb; }
+  .btn-google svg { width: 22px; height: 22px; flex-shrink: 0; }
+  .divider { display: flex; align-items: center; gap: 10px; margin: 18px 0; color: #ccc; font-size: 12px; }
+  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: #e0e0e0; }
+  .btn-email {
+    display: block; width: 100%; padding: 12px; border-radius: 8px; border: none;
+    background: #1a3a5c; color: #fff; font-size: 15px; font-weight: 600;
+    cursor: pointer; transition: background 0.2s; box-sizing: border-box;
+  }
+  .btn-email:hover { background: #2ecc71; }
+  #auth-error { color: #e74c3c; font-size: 13px; margin-top: 12px; display: none; }
+</style>
+
+<!-- Pantalla de bienvenida con Google Sign-In (se oculta si ya hay sesión) -->
+<div id="google-overlay">
+  <div class="logo">+</div>
+  <h1>SaludEnLínea</h1>
+  <p>Tu doctor, a un clic de distancia</p>
+  <div class="card">
+    <h2>Bienvenido</h2>
+    <small>Inicia sesión para continuar</small>
+
+    <a class="btn-google" href="/api/auth/google">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Continuar con Google
+    </a>
+
+    <div class="divider">o</div>
+
+    <button class="btn-email" onclick="entrarConEmail()">
+      Ingresar con email y contraseña
+    </button>
+
+    <div id="auth-error"></div>
+  </div>
+</div>
+
+<body>
+  <script>
+    // ── Capturar token de Google OAuth callback ────────────────────────────
+    (function() {
+      var params = new URLSearchParams(window.location.search);
+      var googleToken = params.get('google_token');
+      var authError   = params.get('auth_error');
+
+      if (googleToken) {
+        // Guardar token y rol, limpiar URL
+        localStorage.setItem('token', googleToken);
+        localStorage.setItem('role', 'patient');
+        window.history.replaceState({}, '', '/');
+      }
+
+      if (authError) {
+        window.history.replaceState({}, '', '/');
+        var el = document.getElementById('auth-error');
+        if (el) {
+          el.style.display = 'block';
+          el.textContent = authError === 'google_cancelado'
+            ? 'Inicio con Google cancelado.'
+            : 'Error al iniciar con Google. Intenta de nuevo.';
+        }
+      }
+
+      // Mostrar overlay solo si NO hay token guardado
+      var token = localStorage.getItem('token');
+      if (!token) {
+        var overlay = document.getElementById('google-overlay');
+        if (overlay) overlay.classList.add('visible');
+      }
+    })();
+
+    function entrarConEmail() {
+      // Ocultar overlay y dejar que Flutter cargue la pantalla de login
+      var overlay = document.getElementById('google-overlay');
+      if (overlay) overlay.classList.remove('visible');
+    }
+
+    // Exponer función para que Flutter pueda ocultar el overlay al cerrar sesión
+    window.showGoogleOverlay = function() {
+      var overlay = document.getElementById('google-overlay');
+      if (overlay) overlay.classList.add('visible');
+    };
+
+    // Auto-actualizar el service worker cuando hay una nueva versión
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        registrations.forEach(function(reg) {
+          reg.update();
+          reg.addEventListener('updatefound', function() {
+            const newWorker = reg.installing;
+            newWorker.addEventListener('statechange', function() {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                newWorker.postMessage({ type: 'SKIP_WAITING' });
+                window.location.reload();
+              }
+            });
+          });
+        });
+      });
+      navigator.serviceWorker.addEventListener('controllerchange', function() {
+        window.location.reload();
+      });
+    }
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
