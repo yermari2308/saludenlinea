@@ -1,0 +1,101 @@
+from datetime import datetime
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, Boolean
+from sqlalchemy.orm import relationship
+from database import Base
+
+
+class Patient(Base):
+    __tablename__ = "patients"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String(100), nullable=False)
+    email = Column(String(150), unique=True, nullable=False)
+    telefono = Column(String(20))
+    fecha_nacimiento = Column(String(20))
+    historial_texto = Column(Text, default="")
+    pass_hash = Column(String(255), nullable=False)
+    activo = Column(Boolean, default=True)
+    creado_en = Column(DateTime, default=datetime.utcnow)
+
+    citas = relationship("Appointment", back_populates="paciente")
+
+
+class Doctor(Base):
+    __tablename__ = "doctors"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String(100), nullable=False)
+    especialidad = Column(String(100), nullable=False)
+    foto_url = Column(String(255), default="")
+    credenciales = Column(Text, default="")
+    horario_json = Column(Text, default="{}")  # JSON string con disponibilidad
+    tarifa = Column(Float, default=15.0)
+    email = Column(String(150), unique=True, nullable=False)
+    pass_hash = Column(String(255), nullable=False)
+    activo = Column(Boolean, default=True)
+    calificacion = Column(Float, default=5.0)
+    creado_en = Column(DateTime, default=datetime.utcnow)
+
+    citas = relationship("Appointment", back_populates="doctor")
+
+
+class Appointment(Base):
+    __tablename__ = "appointments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    paciente_id = Column(Integer, ForeignKey("patients.id"), nullable=False)
+    doctor_id = Column(Integer, ForeignKey("doctors.id"), nullable=False)
+    fecha_hora = Column(DateTime, nullable=False)
+    estado = Column(String(30), default="programada")  # programada|completada|cancelada
+    notas_texto = Column(Text, default="")
+    receta_texto = Column(Text, default="")
+    creado_en = Column(DateTime, default=datetime.utcnow)
+
+    paciente = relationship("Patient", back_populates="citas")
+    doctor = relationship("Doctor", back_populates="citas")
+    pago = relationship("Payment", back_populates="cita", uselist=False)
+    sesion = relationship("ConsultSession", back_populates="cita", uselist=False)
+
+
+class Payment(Base):
+    __tablename__ = "payments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    cita_id = Column(Integer, ForeignKey("appointments.id"), nullable=False)
+    monto = Column(Float, nullable=False)
+    metodo = Column(String(50), default="tarjeta")
+    estado = Column(String(30), default="pendiente")  # pendiente|exitoso|fallido
+    referencia_externa = Column(String(255), default="")
+    fecha_pago = Column(DateTime, default=datetime.utcnow)
+
+    cita = relationship("Appointment", back_populates="pago")
+
+
+class DoctorLead(Base):
+    """Solicitudes de médicos que quieren unirse a la plataforma."""
+    __tablename__ = "doctor_leads"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String(100), nullable=False)
+    especialidad = Column(String(100), nullable=False)
+    email = Column(String(150), nullable=False)
+    telefono = Column(String(30), nullable=False)
+    pais = Column(String(60), nullable=False)
+    credenciales = Column(Text, default="")
+    anos_experiencia = Column(Integer, default=0)
+    mensaje = Column(Text, default="")
+    estado = Column(String(20), default="pendiente")  # pendiente|contactado|activo|rechazado
+    creado_en = Column(DateTime, default=datetime.utcnow)
+
+
+class ConsultSession(Base):
+    __tablename__ = "consult_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    cita_id = Column(Integer, ForeignKey("appointments.id"), nullable=False)
+    token_sala = Column(String(255), unique=True, nullable=False)
+    inicio = Column(DateTime)
+    fin = Column(DateTime)
+    detalle_calidad = Column(String(50), default="")
+
+    cita = relationship("Appointment", back_populates="sesion")
