@@ -113,9 +113,11 @@
         }
       }
 
-      // Mostrar overlay solo si NO hay token guardado
+      // Mostrar overlay solo si hay token válido (no vacío ni "undefined")
       var token = localStorage.getItem('token');
-      if (!token) {
+      if (!token || token === 'undefined' || token === 'null' || token.length < 10) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('role');
         var overlay = document.getElementById('google-overlay');
         if (overlay) overlay.classList.add('visible');
       }
