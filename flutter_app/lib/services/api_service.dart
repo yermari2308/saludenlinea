@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
 
 class ApiService {
-  static const String baseUrl = 'https://saludenlinea-api.yermariflores081.workers.dev';
+  static const String baseUrl = 'https://saludenlinea-production.up.railway.app';
 
   // ── Token ────────────────────────────────────────────────────────────────
 
