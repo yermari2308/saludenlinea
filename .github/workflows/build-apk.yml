@@ -5,6 +5,9 @@ on:
     branches: [master]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -18,12 +21,14 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'
+          flutter-version: '3.32.0'
           channel: stable
 
-      - name: Instalar dependencias
+      - name: Limpiar y obtener dependencias
         working-directory: flutter_app
-        run: flutter pub get
+        run: |
+          flutter clean
+          flutter pub get
 
       - name: Compilar APK release
         working-directory: flutter_app
@@ -32,16 +37,11 @@ jobs:
       - name: Renombrar APK
         run: cp flutter_app/build/app/outputs/flutter-apk/app-release.apk SaludEnLinea.apk
 
-      - name: Verificar URL en APK
-        run: strings SaludEnLinea.apk | grep -o 'railway\|onrender\|workers\.dev' | head -5 || true
-
       - name: Publicar release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.0
           name: SaludEnLínea v1.0.0
-          body: APK actualizado - conecta con Railway
+          body: APK actualizado con servidor Railway
           files: SaludEnLinea.apk
           make_latest: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
