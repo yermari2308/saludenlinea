@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Descargar SaludEnLínea</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #1a3a5c 0%, #2563a8 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .card {
+    background: white;
+    border-radius: 24px;
+    padding: 40px 32px;
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  }
+  .icon { font-size: 64px; margin-bottom: 16px; }
+  h1 { color: #1a3a5c; font-size: 28px; margin-bottom: 8px; }
+  .sub { color: #666; font-size: 15px; margin-bottom: 32px; }
+  .btn-download {
+    display: block;
+    background: #2ecc71;
+    color: white;
+    text-decoration: none;
+    padding: 18px 24px;
+    border-radius: 14px;
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 12px;
+    transition: background 0.2s;
+  }
+  .btn-download:hover { background: #27ae60; }
+  .info {
+    background: #f4f6f9;
+    border-radius: 12px;
+    padding: 16px;
+    margin: 20px 0;
+    text-align: left;
+  }
+  .info p { color: #555; font-size: 13px; margin-bottom: 8px; }
+  .info p:last-child { margin-bottom: 0; }
+  .badge {
+    display: inline-block;
+    background: #e8f5e9;
+    color: #27ae60;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 24px;
+  }
+  .version { color: #999; font-size: 12px; margin-top: 16px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">🏥</div>
+  <h1>SaludEnLínea</h1>
+  <p class="sub">Tu doctor en el bolsillo</p>
+  <span class="badge">✓ Versión 1.0.0 · Android</span>
+
+  <a class="btn-download"
+     href="https://github.com/yermari2308/saludenlinea/releases/download/v1.0.0/SaludEnLinea.apk"
+     download="SaludEnLinea.apk">
+    ⬇️ Descargar App (Android)
+  </a>
+
+  <div class="info">
+    <p>📱 <b>Compatible con:</b> Android 6.0 o superior</p>
+    <p>💾 <b>Tamaño:</b> ~40 MB</p>
+    <p>🔒 <b>Seguro:</b> Sin virus, sin publicidad</p>
+    <p>⚡ <b>Incluye:</b> Consultas médicas, citas y recetas digitales</p>
+  </div>
+
+  <div class="info" style="background:#fff3cd; border-left: 4px solid #f39c12;">
+    <p>⚙️ <b>Antes de instalar:</b> Ve a Ajustes → Seguridad → activa <b>"Fuentes desconocidas"</b> o <b>"Instalar apps desconocidas"</b></p>
+  </div>
+
+  <p class="version">v1.0.0 · Junio 2026 · saludenlinea.cr</p>
+</div>
+
+<script>
+  // Auto-detectar Android y descargar automáticamente
+  const isAndroid = /android/i.test(navigator.userAgent);
+  if (isAndroid) {
+    // Pequeño delay para que la página cargue primero
+    setTimeout(() => {
+      window.location.href = 'https://github.com/yermari2308/saludenlinea/releases/download/v1.0.0/SaludEnLinea.apk';
+    }, 1500);
+  }
+</script>
+</body>
+</html>

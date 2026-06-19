@@ -1,5 +1,6 @@
-import 'dart:html' as html;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/api_service.dart';
 
 class ConsultationScreen extends StatefulWidget {
@@ -36,9 +37,12 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
     }
   }
 
-  void _abrirVideollamada() {
+  Future<void> _abrirVideollamada() async {
     if (_jitsiUrl != null) {
-      html.window.open(_jitsiUrl!, '_blank');
+      final uri = Uri.parse(_jitsiUrl!);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
     }
   }
 
