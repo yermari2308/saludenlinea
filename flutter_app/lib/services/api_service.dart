@@ -2,9 +2,10 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
+import 'doh_client.dart';
 
 class ApiService {
-  static const String baseUrl = 'https://side-variations-suggest-reservations.trycloudflare.com';
+  static const String baseUrl = 'https://saludenlinea-production.up.railway.app';
 
   // ── Token ────────────────────────────────────────────────────────────────
 
@@ -51,8 +52,8 @@ class ApiService {
     required String password,
     String? telefono,
   }) async {
-    final res = await http.post(
-      Uri.parse('$baseUrl/api/register/patient'),
+    final res = await DohClient.post(
+      '$baseUrl/api/register/patient',
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'nombre': nombre,
@@ -65,8 +66,8 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> login(String email, String password) async {
-    final res = await http.post(
-      Uri.parse('$baseUrl/api/login'),
+    final res = await DohClient.post(
+      '$baseUrl/api/login',
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
     );
@@ -77,8 +78,8 @@ class ApiService {
 
   static Future<List<Doctor>> getDoctors({String? especialidad}) async {
     final params = especialidad != null ? '?especialidad=$especialidad' : '';
-    final res = await http.get(
-      Uri.parse('$baseUrl/api/doctors$params'),
+    final res = await DohClient.get(
+      '$baseUrl/api/doctors$params',
       headers: await _headers(),
     );
     final data = _parse(res) as List;
@@ -86,8 +87,8 @@ class ApiService {
   }
 
   static Future<Doctor> getDoctor(int id) async {
-    final res = await http.get(
-      Uri.parse('$baseUrl/api/doctors/$id'),
+    final res = await DohClient.get(
+      '$baseUrl/api/doctors/$id',
       headers: await _headers(),
     );
     return Doctor.fromJson(_parse(res));
@@ -100,8 +101,8 @@ class ApiService {
     required DateTime fechaHora,
     String metodoPago = 'tarjeta',
   }) async {
-    final res = await http.post(
-      Uri.parse('$baseUrl/api/appointments'),
+    final res = await DohClient.post(
+      '$baseUrl/api/appointments',
       headers: await _headers(),
       body: jsonEncode({
         'doctor_id': doctorId,
@@ -113,8 +114,8 @@ class ApiService {
   }
 
   static Future<List<Appointment>> getAppointments() async {
-    final res = await http.get(
-      Uri.parse('$baseUrl/api/appointments'),
+    final res = await DohClient.get(
+      '$baseUrl/api/appointments',
       headers: await _headers(),
     );
     final data = _parse(res) as List;
@@ -122,24 +123,24 @@ class ApiService {
   }
 
   static Future<void> cancelAppointment(int id) async {
-    final res = await http.post(
-      Uri.parse('$baseUrl/api/cancel/$id'),
+    final res = await DohClient.post(
+      '$baseUrl/api/cancel/$id',
       headers: await _headers(),
     );
     _parse(res);
   }
 
   static Future<Map<String, dynamic>> getConsultSession(int appointmentId) async {
-    final res = await http.get(
-      Uri.parse('$baseUrl/api/consultation/$appointmentId'),
+    final res = await DohClient.get(
+      '$baseUrl/api/consultation/$appointmentId',
       headers: await _headers(),
     );
     return _parse(res);
   }
 
   static Future<Map<String, dynamic>> getReceta(int appointmentId) async {
-    final res = await http.get(
-      Uri.parse('$baseUrl/api/receta/$appointmentId'),
+    final res = await DohClient.get(
+      '$baseUrl/api/receta/$appointmentId',
       headers: await _headers(),
     );
     return _parse(res);
@@ -157,8 +158,8 @@ class ApiService {
     required int anosExperiencia,
     required String mensaje,
   }) async {
-    final res = await http.post(
-      Uri.parse('$baseUrl/api/leads'),
+    final res = await DohClient.post(
+      '$baseUrl/api/leads',
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'nombre': nombre,
@@ -177,8 +178,8 @@ class ApiService {
   // ── Payments ──────────────────────────────────────────────────────────────
 
   static Future<Map<String, dynamic>> createPaymentPreference(int appointmentId) async {
-    final res = await http.post(
-      Uri.parse('$baseUrl/api/payments/preference'),
+    final res = await DohClient.post(
+      '$baseUrl/api/payments/preference',
       headers: await _headers(),
       body: jsonEncode({'appointment_id': appointmentId}),
     );
@@ -188,8 +189,8 @@ class ApiService {
   // ── Patient ───────────────────────────────────────────────────────────────
 
   static Future<Patient> getMyProfile() async {
-    final res = await http.get(
-      Uri.parse('$baseUrl/api/patients/me'),
+    final res = await DohClient.get(
+      '$baseUrl/api/patients/me',
       headers: await _headers(),
     );
     return Patient.fromJson(_parse(res));

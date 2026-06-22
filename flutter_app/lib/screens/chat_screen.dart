@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../services/api_service.dart';
+import '../services/doh_client.dart';
 
 class ChatScreen extends StatefulWidget {
   final int citaId;
@@ -35,13 +36,14 @@ class _ChatScreenState extends State<ChatScreen> {
     _conectar();
   }
 
-  void _conectar() {
+  Future<void> _conectar() async {
     final wsBase = ApiService.baseUrl
         .replaceFirst('https://', 'wss://')
         .replaceFirst('http://', 'ws://');
-    final uri = Uri.parse(
+    var uri = Uri.parse(
       '$wsBase/api/chat/ws/${widget.citaId}/${widget.remitente}/${widget.remitenteId}',
     );
+    uri = await DohClient.resolveWsUri(uri);
     _channel = WebSocketChannel.connect(uri);
     setState(() => _conectado = true);
 
