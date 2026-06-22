@@ -23,7 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _loading = true);
     try {
       final res = await ApiService.login(_emailCtrl.text.trim(), _passCtrl.text);
-      await ApiService.saveToken(res['access_token'], res['role']);
+      await ApiService.saveToken(res['access_token'], res['role'], userId: res['user_id'] ?? 0);
       if (!mounted) return;
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
     } catch (e) {

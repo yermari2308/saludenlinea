@@ -20,6 +20,7 @@ class Patient(Base):
     citas = relationship("Appointment", back_populates="paciente")
 
 
+
 class Doctor(Base):
     __tablename__ = "doctors"
 
@@ -55,6 +56,7 @@ class Appointment(Base):
     doctor = relationship("Doctor", back_populates="citas")
     pago = relationship("Payment", back_populates="cita", uselist=False)
     sesion = relationship("ConsultSession", back_populates="cita", uselist=False)
+    mensajes = relationship("ChatMessage", back_populates="cita")
 
 
 class Payment(Base):
@@ -86,6 +88,19 @@ class DoctorLead(Base):
     mensaje = Column(Text, default="")
     estado = Column(String(20), default="pendiente")  # pendiente|contactado|activo|rechazado
     creado_en = Column(DateTime, default=datetime.utcnow)
+
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    cita_id = Column(Integer, ForeignKey("appointments.id"), nullable=False)
+    remitente = Column(String(10), nullable=False)  # "paciente" | "doctor"
+    remitente_id = Column(Integer, nullable=False)
+    mensaje = Column(Text, nullable=False)
+    enviado_en = Column(DateTime, default=datetime.utcnow)
+
+    cita = relationship("Appointment", back_populates="mensajes")
 
 
 class ConsultSession(Base):

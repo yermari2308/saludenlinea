@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
 import 'consultation_screen.dart';
+import 'chat_screen.dart';
 
 class AppointmentsScreen extends StatefulWidget {
   const AppointmentsScreen({super.key});
@@ -162,6 +163,19 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                                 SizedBox(
                                   width: double.infinity,
                                   child: OutlinedButton.icon(
+                                    icon: const Icon(Icons.chat_bubble_outline, color: Color(0xFF1976D2)),
+                                    label: const Text('Chat con el médico',
+                                        style: TextStyle(color: Color(0xFF1976D2), fontWeight: FontWeight.bold)),
+                                    onPressed: () => _abrirChat(apt.id),
+                                    style: OutlinedButton.styleFrom(
+                                        side: const BorderSide(color: Color(0xFF1976D2)),
+                                        padding: const EdgeInsets.symmetric(vertical: 12)),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
                                     icon: const Icon(Icons.cancel_outlined, color: Colors.red),
                                     label: const Text('Cancelar cita',
                                         style: TextStyle(color: Colors.red)),
@@ -178,6 +192,22 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                     },
                   ),
                 ),
+    );
+  }
+
+  Future<void> _abrirChat(int citaId) async {
+    final prefs = await ApiService.getUserInfo();
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChatScreen(
+          citaId: citaId,
+          remitente: prefs['role'] ?? 'paciente',
+          remitenteId: prefs['id'] ?? 0,
+          nombreOtro: prefs['role'] == 'doctor' ? 'Paciente' : 'Médico',
+        ),
+      ),
     );
   }
 

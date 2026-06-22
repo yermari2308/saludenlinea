@@ -9,6 +9,7 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     role: str  # "patient" | "doctor"
+    user_id: int = 0
 
 
 class LoginRequest(BaseModel):

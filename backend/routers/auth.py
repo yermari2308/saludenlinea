@@ -31,7 +31,7 @@ def register_patient(request: Request, data: PatientCreate, db: Session = Depend
     db.refresh(patient)
     logger.info("Registro exitoso id=%s email=%s ip=%s", patient.id, patient.email, get_remote_address(request))
     token = create_token({"sub": str(patient.id), "role": "patient", "email": patient.email})
-    return TokenResponse(access_token=token, role="patient")
+    return TokenResponse(access_token=token, role="patient", user_id=patient.id)
 
 
 @router.post("/register/doctor", response_model=TokenResponse, status_code=201)
@@ -53,7 +53,7 @@ def register_doctor(request: Request, data: DoctorCreate, db: Session = Depends(
     db.refresh(doctor)
     logger.info("Registro médico exitoso id=%s email=%s ip=%s", doctor.id, doctor.email, get_remote_address(request))
     token = create_token({"sub": str(doctor.id), "role": "doctor", "email": doctor.email})
-    return TokenResponse(access_token=token, role="doctor")
+    return TokenResponse(access_token=token, role="doctor", user_id=doctor.id)
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -69,4 +69,4 @@ def login(request: Request, data: LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
     logger.info("Login exitoso id=%s email=%s role=%s ip=%s", user.id, user.email, role, get_remote_address(request))
     token = create_token({"sub": str(user.id), "role": role, "email": user.email})
-    return TokenResponse(access_token=token, role=role)
+    return TokenResponse(access_token=token, role=role, user_id=user.id)
