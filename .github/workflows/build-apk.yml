@@ -35,7 +35,10 @@ jobs:
         run: flutter build apk --release --verbose 2>&1 | tail -100
 
       - name: Renombrar APK
-        run: cp flutter_app/build/app/outputs/flutter-apk/app-release.apk SaludEnLinea.apk
+        run: |
+          find flutter_app/build -name "*.apk" 2>/dev/null || true
+          cp flutter_app/build/app/outputs/apk/release/app-release.apk SaludEnLinea.apk 2>/dev/null || \
+          cp flutter_app/build/app/outputs/flutter-apk/app-release.apk SaludEnLinea.apk
 
       - name: Publicar release
         uses: softprops/action-gh-release@v2
