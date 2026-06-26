@@ -36,9 +36,13 @@ jobs:
 
       - name: Renombrar APK
         run: |
-          find flutter_app/build -name "*.apk" 2>/dev/null || true
-          cp flutter_app/build/app/outputs/apk/release/app-release.apk SaludEnLinea.apk 2>/dev/null || \
-          cp flutter_app/build/app/outputs/flutter-apk/app-release.apk SaludEnLinea.apk
+          echo "=== Buscando APK ==="
+          find flutter_app/build -name "*.apk" 2>/dev/null
+          echo "=== Copiando ==="
+          APK=$(find flutter_app/build -name "app-release.apk" | head -1)
+          if [ -z "$APK" ]; then APK=$(find flutter_app/build -name "*.apk" | head -1); fi
+          echo "APK encontrado: $APK"
+          cp "$APK" SaludEnLinea.apk
 
       - name: Publicar release
         uses: softprops/action-gh-release@v2
