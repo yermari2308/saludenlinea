@@ -32,7 +32,7 @@ jobs:
 
       - name: Compilar APK release
         working-directory: flutter_app
-        run: flutter build apk --release
+        run: flutter build apk --release --verbose 2>&1 | tail -100
 
       - name: Renombrar APK
         run: cp flutter_app/build/app/outputs/flutter-apk/app-release.apk SaludEnLinea.apk
