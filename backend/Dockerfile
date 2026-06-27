@@ -7,8 +7,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN python -c "from database import engine; from models import Base; Base.metadata.create_all(bind=engine)"
-
 COPY start.sh /start.sh
 RUN chmod +x /start.sh
 
