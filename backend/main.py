@@ -14,13 +14,15 @@ from routers import auth, doctors, appointments, patients, leads, admin, payment
 
 load_dotenv()
 
+_handlers = [logging.StreamHandler()]
+try:
+    _handlers.append(logging.FileHandler("saludenlinea.log", encoding="utf-8"))
+except OSError:
+    pass
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler("saludenlinea.log", encoding="utf-8"),
-    ],
+    handlers=_handlers,
 )
 logger = logging.getLogger("saludenlinea")
 
