@@ -40,9 +40,9 @@ class DohClient {
   }
 
   static http.Client _buildClient() {
-    final httpClient = HttpClient()
-      ..badCertificateCallback = (cert, host, port) => true
-      ..connectionTimeout = const Duration(seconds: 15);
+    final httpClient = HttpClient();
+    httpClient.badCertificateCallback = (cert, host, port) => true;
+    httpClient.connectionTimeout = const Duration(seconds: 15);
     return IOClient(httpClient);
   }
 

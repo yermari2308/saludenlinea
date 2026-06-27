@@ -28,6 +28,40 @@ GOOGLE_USER_URL  = "https://www.googleapis.com/oauth2/v3/userinfo"
 
 SCOPES = "openid email profile"
 
+GOOGLE_TOKEN_INFO_URL = "https://oauth2.googleapis.com/tokeninfo"
+
+
+@router.post("/google/mobile")
+async def google_mobile_login(payload: dict, db: Session = Depends(get_db)):
+    """Recibe el idToken de google_sign_in (Flutter) y devuelve JWT propio."""
+    id_token = payload.get("id_token")
+    if not id_token:
+        raise HTTPException(status_code=400, detail="id_token requerido")
+
+    async with httpx.AsyncClient() as client:
+        res = await client.get(GOOGLE_TOKEN_INFO_URL, params={"id_token": id_token})
+        if res.status_code != 200:
+            raise HTTPException(status_code=401, detail="Token de Google inválido")
+        info = res.json()
+
+    email = info.get("email")
+    nombre = info.get("name") or (email.split("@")[0] if email else "")
+    if not email:
+        raise HTTPException(status_code=400, detail="El token no contiene email")
+
+    patient = db.query(Patient).filter(Patient.email == email).first()
+    if not patient:
+        patient = Patient(nombre=nombre, email=email, pass_hash="GOOGLE_OAUTH", activo=True)
+        db.add(patient)
+        db.commit()
+        db.refresh(patient)
+        logger.info("Nuevo paciente via Google mobile: id=%s email=%s", patient.id, email)
+    else:
+        logger.info("Login Google mobile: id=%s email=%s", patient.id, email)
+
+    jwt = create_token({"sub": str(patient.id), "role": "patient", "email": patient.email})
+    return {"access_token": jwt, "token_type": "bearer", "role": "patient", "user_id": patient.id}
+
 
 @router.get("/google")
 def google_login():

@@ -74,6 +74,15 @@ class ApiService {
     return _parse(res);
   }
 
+  static Future<Map<String, dynamic>> loginWithGoogleToken(String idToken) async {
+    final res = await DohClient.post(
+      '$baseUrl/api/auth/google/mobile',
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'id_token': idToken}),
+    );
+    return _parse(res);
+  }
+
   // ── Doctors ───────────────────────────────────────────────────────────────
 
   static Future<List<Doctor>> getDoctors({String? especialidad}) async {
