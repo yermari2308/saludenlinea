@@ -27,6 +27,8 @@ jobs:
       - name: Obtener dependencias
         working-directory: flutter_app
         run: |
+          echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
+          echo "sdk.dir=$ANDROID_HOME" >> android/local.properties
           flutter clean
           flutter pub get
 
