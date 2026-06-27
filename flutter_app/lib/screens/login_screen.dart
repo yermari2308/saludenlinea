@@ -5,7 +5,10 @@ import 'home_screen.dart';
 import 'register_screen.dart';
 import 'doctor_apply_screen.dart';
 
-final _googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+final _googleSignIn = GoogleSignIn(
+  serverClientId: '137990449957-5c091uvl7sqnl7md8s5cr0qng8r0bvu7.apps.googleusercontent.com',
+  scopes: ['email', 'profile'],
+);
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});

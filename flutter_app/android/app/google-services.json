@@ -1,0 +1,43 @@
+{
+  "project_info": {
+    "project_number": "137990449957",
+    "project_id": "salud-en-linea-499720",
+    "storage_bucket": "salud-en-linea-499720.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:137990449957:android:saludenlinea",
+        "android_client_info": {
+          "package_name": "com.saludenlinea.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "137990449957-3fm4vccq3f1gdq17ghcg4huvunkipve1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.saludenlinea.app",
+            "certificate_hash": "f5cd3772224874d352351a371db83c952bff3341"
+          }
+        },
+        {
+          "client_id": "137990449957-5c091uvl7sqnl7md8s5cr0qng8r0bvu7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "137990449957-5c091uvl7sqnl7md8s5cr0qng8r0bvu7.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
