@@ -32,12 +32,12 @@ jobs:
           flutter clean
           flutter pub get
 
-      - name: Mostrar SHA-1 del keystore CI
-        run: keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android 2>/dev/null | grep SHA1
-
       - name: Compilar APK release
         working-directory: flutter_app
         run: flutter build apk --release
+
+      - name: Mostrar SHA-1 del keystore CI
+        run: keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android | grep -i "SHA"
 
       - name: Buscar y subir APK
         run: |
