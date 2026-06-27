@@ -24,7 +24,7 @@ jobs:
           flutter-version: '3.27.4'
           channel: stable
 
-      - name: Limpiar y obtener dependencias
+      - name: Obtener dependencias
         working-directory: flutter_app
         run: |
           flutter clean
@@ -32,23 +32,19 @@ jobs:
 
       - name: Compilar APK release
         working-directory: flutter_app
-        run: flutter build apk --release --verbose 2>&1 | tail -100
+        run: flutter build apk --release
 
-      - name: Renombrar APK
+      - name: Buscar y subir APK
         run: |
-          echo "=== Buscando APK ==="
-          find flutter_app/build -name "*.apk" 2>/dev/null
-          echo "=== Copiando ==="
-          APK=$(find flutter_app/build -name "app-release.apk" | head -1)
-          if [ -z "$APK" ]; then APK=$(find flutter_app/build -name "*.apk" | head -1); fi
-          echo "APK encontrado: $APK"
+          APK=$(find . -name "app-release.apk" 2>/dev/null | head -1)
+          echo "APK: $APK"
           cp "$APK" SaludEnLinea.apk
 
       - name: Publicar release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.0
-          name: SaludEnLínea v1.0.0
-          body: APK actualizado con servidor Railway
+          tag_name: v1.0.${{ github.run_number }}
+          name: SaludEnLínea v1.0.${{ github.run_number }}
+          body: APK listo para descargar
           files: SaludEnLinea.apk
           make_latest: true
