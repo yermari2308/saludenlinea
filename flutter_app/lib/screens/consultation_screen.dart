@@ -38,10 +38,19 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
   }
 
   Future<void> _abrirVideollamada() async {
-    if (_jitsiUrl != null) {
-      final uri = Uri.parse(_jitsiUrl!);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (_jitsiUrl == null) return;
+    final uri = Uri.parse(_jitsiUrl!);
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      try {
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('No se pudo abrir la videollamada: $e')),
+          );
+        }
       }
     }
   }
