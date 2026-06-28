@@ -27,7 +27,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         password: _passCtrl.text,
         telefono: _telCtrl.text.trim(),
       );
-      await ApiService.saveToken(res['access_token'], res['role'], userId: res['user_id'] ?? 0);
+      await ApiService.saveToken(res['access_token'], res['role'],
+          userId: res['user_id'] ?? 0, nombre: res['nombre'] ?? '');
       if (!mounted) return;
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
     } catch (e) {
