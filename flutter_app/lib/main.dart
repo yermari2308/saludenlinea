@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/doctor_home_screen.dart';
 
 void main() {
   runApp(const SaludEnLineaApp());
@@ -42,11 +43,17 @@ class _SplashRouterState extends State<SplashRouter> {
   Future<void> _checkAuth() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
+    final role = prefs.getString('role') ?? 'paciente';
     if (!mounted) return;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => token != null ? const HomeScreen() : const LoginScreen()),
-    );
+    Widget screen;
+    if (token == null) {
+      screen = const LoginScreen();
+    } else if (role == 'doctor') {
+      screen = const DoctorHomeScreen();
+    } else {
+      screen = const HomeScreen();
+    }
+    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => screen));
   }
 
   @override

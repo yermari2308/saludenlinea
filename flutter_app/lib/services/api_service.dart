@@ -14,11 +14,13 @@ class ApiService {
     return prefs.getString('token');
   }
 
-  static Future<void> saveToken(String token, String role, {int userId = 0}) async {
+  static Future<void> saveToken(String token, String role,
+      {int userId = 0, String nombre = ''}) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('token', token);
     await prefs.setString('role', role);
     await prefs.setInt('user_id', userId);
+    if (nombre.isNotEmpty) await prefs.setString('nombre', nombre);
   }
 
   static Future<void> logout() async {
@@ -26,6 +28,7 @@ class ApiService {
     await prefs.remove('token');
     await prefs.remove('role');
     await prefs.remove('user_id');
+    await prefs.remove('nombre');
   }
 
   static Future<Map<String, dynamic>> getUserInfo() async {
@@ -33,6 +36,7 @@ class ApiService {
     return {
       'role': prefs.getString('role') ?? 'paciente',
       'id': prefs.getInt('user_id') ?? 0,
+      'nombre': prefs.getString('nombre') ?? '',
     };
   }
 

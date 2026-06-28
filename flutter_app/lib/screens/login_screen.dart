@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../services/api_service.dart';
 import 'home_screen.dart';
+import 'doctor_home_screen.dart';
 import 'register_screen.dart';
 import 'doctor_apply_screen.dart';
 
@@ -24,14 +25,20 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _loading = false;
   bool _obscure = true;
 
+  void _goHome(String role) {
+    final screen = role == 'doctor' ? const DoctorHomeScreen() : const HomeScreen();
+    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => screen));
+  }
+
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
     try {
       final res = await ApiService.login(_emailCtrl.text.trim(), _passCtrl.text);
-      await ApiService.saveToken(res['access_token'], res['role'], userId: res['user_id'] ?? 0);
+      await ApiService.saveToken(res['access_token'], res['role'],
+          userId: res['user_id'] ?? 0, nombre: res['nombre'] ?? '');
       if (!mounted) return;
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+      _goHome(res['role'] ?? 'paciente');
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
@@ -49,9 +56,10 @@ class _LoginScreenState extends State<LoginScreen> {
       final idToken = auth.idToken;
       if (idToken == null) throw Exception('No se obtuvo token de Google');
       final res = await ApiService.loginWithGoogleToken(idToken);
-      await ApiService.saveToken(res['access_token'], res['role'], userId: res['user_id'] ?? 0);
+      await ApiService.saveToken(res['access_token'], res['role'],
+          userId: res['user_id'] ?? 0, nombre: res['nombre'] ?? '');
       if (!mounted) return;
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+      _goHome(res['role'] ?? 'paciente');
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
