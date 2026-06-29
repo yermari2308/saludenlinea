@@ -5,6 +5,7 @@ import 'home_screen.dart';
 import 'doctor_home_screen.dart';
 import 'register_screen.dart';
 import 'doctor_apply_screen.dart';
+import 'forgot_password_screen.dart';
 
 final _googleSignIn = GoogleSignIn(
   serverClientId: '137990449957-5c091uvl7sqnl7md8s5cr0qng8r0bvu7.apps.googleusercontent.com',
@@ -173,6 +174,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
+                        TextButton(
+                          onPressed: () => Navigator.push(
+                              context, MaterialPageRoute(builder: (_) => const ForgotPasswordScreen())),
+                          child: const Text('¿Olvidaste tu contraseña?',
+                              style: TextStyle(color: Color(0xFF1a3a5c))),
+                        ),
                         TextButton(
                           onPressed: () => Navigator.push(
                               context, MaterialPageRoute(builder: (_) => const RegisterScreen())),

@@ -78,6 +78,24 @@ class ApiService {
     return _parse(res);
   }
 
+  static Future<void> forgotPassword(String email) async {
+    final res = await DohClient.post(
+      '$baseUrl/api/auth/forgot-password',
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email}),
+    );
+    _parse(res);
+  }
+
+  static Future<void> resetPassword({required String token, required String newPassword}) async {
+    final res = await DohClient.post(
+      '$baseUrl/api/auth/reset-password',
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'token': token, 'new_password': newPassword}),
+    );
+    _parse(res);
+  }
+
   static Future<Map<String, dynamic>> loginWithGoogleToken(String idToken) async {
     final res = await DohClient.post(
       '$baseUrl/api/auth/google/mobile',
