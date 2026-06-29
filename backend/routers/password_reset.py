@@ -15,7 +15,7 @@ limiter = Limiter(key_func=get_remote_address)
 router = APIRouter(prefix="/api/auth", tags=["password-reset"])
 
 RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
-FROM_EMAIL = os.getenv("FROM_EMAIL", "noreply@saludenlinea.app")
+FROM_EMAIL = os.getenv("FROM_EMAIL", "onboarding@resend.dev")
 BASE_URL = os.getenv("BASE_URL", "https://saludenlinea-production.up.railway.app")
 
 # Almacenamiento en memoria (suficiente para MVP)
