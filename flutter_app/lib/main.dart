@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/doctor_home_screen.dart';
+import 'services/api_service.dart';
 
 void main() {
   runApp(const SaludEnLineaApp());
@@ -45,15 +46,31 @@ class _SplashRouterState extends State<SplashRouter> {
     final token = prefs.getString('token');
     final role = prefs.getString('role') ?? 'paciente';
     if (!mounted) return;
-    Widget screen;
+
     if (token == null) {
-      screen = const LoginScreen();
-    } else if (role == 'doctor') {
-      screen = const DoctorHomeScreen();
-    } else {
-      screen = const HomeScreen();
+      _goLogin();
+      return;
     }
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => screen));
+
+    // Verificar que el token sea válido antes de entrar
+    try {
+      final res = await ApiService.getUserInfo();
+      if (!mounted) return;
+      if (role == 'doctor') {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const DoctorHomeScreen()));
+      } else {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+      }
+    } catch (_) {
+      // Token inválido o expirado → limpiar y mandar al login
+      await ApiService.logout();
+      if (!mounted) return;
+      _goLogin();
+    }
+  }
+
+  void _goLogin() {
+    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
   }
 
   @override
