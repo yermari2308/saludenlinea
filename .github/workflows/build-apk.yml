@@ -1,12 +1,9 @@
-name: Build y Publicar APK
+name: Build APK
 
 on:
   push:
     branches: [master]
   workflow_dispatch:
-
-permissions:
-  contents: write
 
 jobs:
   build:
@@ -21,36 +18,20 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.27.4'
+          flutter-version: '3.22.0'
           channel: stable
 
-      - name: Obtener dependencias
+      - name: Install dependencies
         working-directory: flutter_app
-        run: |
-          echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
-          echo "sdk.dir=$ANDROID_HOME" >> android/local.properties
-          flutter clean
-          flutter pub get
+        run: flutter pub get
 
-      - name: Compilar APK release
+      - name: Build APK
         working-directory: flutter_app
         run: flutter build apk --release
 
-      - name: Mostrar SHA-1 del keystore
-        working-directory: flutter_app
-        run: keytool -list -v -keystore android/app/debug.keystore -alias androiddebugkey -storepass android -keypass android 2>&1 | grep -i sha
-
-      - name: Buscar y subir APK
-        run: |
-          APK=$(find . -name "app-release.apk" 2>/dev/null | head -1)
-          echo "APK: $APK"
-          cp "$APK" SaludEnLinea.apk
-
-      - name: Publicar release
-        uses: softprops/action-gh-release@v2
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: v1.0.${{ github.run_number }}
-          name: SaludEnLínea v1.0.${{ github.run_number }}
-          body: APK listo para descargar
-          files: SaludEnLinea.apk
-          make_latest: true
+          name: SaludEnLinea-APK
+          path: flutter_app/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30

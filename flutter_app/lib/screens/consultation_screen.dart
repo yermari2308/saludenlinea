@@ -1,6 +1,6 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../app_theme.dart';
 import '../services/api_service.dart';
 
 class ConsultationScreen extends StatefulWidget {
@@ -24,6 +24,7 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
   }
 
   Future<void> _loadSession() async {
+    setState(() { _loading = true; _error = null; });
     try {
       final data = await ApiService.getConsultSession(widget.appointmentId);
       setState(() {
@@ -51,7 +52,12 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('No se pudo abrir la videollamada: $e')),
+            SnackBar(
+              content: Text('No se pudo abrir: $e'),
+              backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
           );
         }
       }
@@ -61,231 +67,352 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6F8),
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Videoconsulta'),
-        backgroundColor: const Color(0xFF1a3a5c),
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
+        elevation: 0,
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.primaryLight))
           : _finalizada
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.check_circle, size: 80, color: Color(0xFF2ecc71)),
-                        const SizedBox(height: 24),
-                        const Text('Consulta Finalizada',
-                            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold,
-                                color: Color(0xFF1a3a5c))),
-                        const SizedBox(height: 12),
-                        const Text('Esta consulta ya fue completada. Revisa "Mis Citas" para ver tu receta.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.grey, fontSize: 15)),
-                        const SizedBox(height: 28),
-                        ElevatedButton(
-                          onPressed: () => Navigator.pop(context),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF1a3a5c),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                          ),
-                          child: const Text('Volver a mis citas'),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
+              ? _buildFinalizada()
               : _error != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                        const SizedBox(height: 16),
-                        Text(_error!, textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.red)),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () { setState(() { _loading = true; _error = null; }); _loadSession(); },
-                          child: const Text('Reintentar'),
-                        ),
-                      ],
-                    ),
+                  ? _buildError()
+                  : _buildReady(),
+    );
+  }
+
+  Widget _buildFinalizada() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: AppColors.accentDark.withOpacity(0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.check_circle_rounded,
+                  size: 54, color: AppColors.accentDark),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Consulta Finalizada',
+              style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Esta consulta fue completada. Revisa "Mis Citas" para ver tu receta.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  color: AppColors.textSecondary, fontSize: 14, height: 1.5),
+            ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryLight,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                ),
+                child: const Text('Volver a mis citas',
+                    style: TextStyle(fontWeight: FontWeight.w700)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildError() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.error.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.error_outline_rounded,
+                  size: 48, color: AppColors.error),
+            ),
+            const SizedBox(height: 16),
+            Text(_error!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    color: AppColors.textSecondary, fontSize: 14)),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _loadSession,
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryLight,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12))),
+              child: const Text('Reintentar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReady() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
+      child: Column(
+        children: [
+          // Hero icon
+          Container(
+            width: 96,
+            height: 96,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppColors.primaryLight, AppColors.primary],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primaryLight.withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.videocam_rounded, size: 48, color: Colors.white),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Tu sala está lista',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+              letterSpacing: -0.3,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'La videollamada se abrirá en otra app. Permite acceso a cámara y micrófono.',
+            style: TextStyle(
+                color: AppColors.textSecondary, fontSize: 14, height: 1.5),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 32),
+          // Pasos
+          _buildPasos(),
+          const SizedBox(height: 32),
+          // Botón principal
+          SizedBox(
+            width: double.infinity,
+            child: GestureDetector(
+              onTap: _abrirVideollamada,
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppColors.accent, AppColors.accentDark],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                )
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      // Icono principal
-                      Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1a3a5c),
-                          borderRadius: BorderRadius.circular(50),
-                        ),
-                        child: const Icon(Icons.videocam, size: 52, color: Colors.white),
-                      ),
-                      const SizedBox(height: 24),
-                      const Text(
-                        'Tu sala de videoconsulta está lista',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1a3a5c),
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'Al hacer clic en el botón se abrirá la videollamada en una nueva pestaña. '
-                        'Asegúrate de permitir el acceso a tu cámara y micrófono.',
-                        style: TextStyle(color: Colors.grey, fontSize: 14),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 32),
-
-                      // Instrucciones paso a paso
-                      _Paso(
-                        numero: '1',
-                        titulo: 'Haz clic en "Entrar a la consulta"',
-                        descripcion: 'Se abrirá Jitsi Meet en una nueva pestaña.',
-                        icono: Icons.touch_app,
-                      ),
-                      _Paso(
-                        numero: '2',
-                        titulo: 'Permite cámara y micrófono',
-                        descripcion: 'El navegador te pedirá permiso. Acepta para que el médico pueda verte.',
-                        icono: Icons.camera_alt,
-                      ),
-                      _Paso(
-                        numero: '3',
-                        titulo: 'Espera al médico',
-                        descripcion: 'El médico entrará a la misma sala. La consulta comenzará automáticamente.',
-                        icono: Icons.access_time,
-                      ),
-                      _Paso(
-                        numero: '4',
-                        titulo: 'Al terminar',
-                        descripcion: 'Cierra la pestaña. Tu receta aparecerá en "Mis Citas" al finalizar.',
-                        icono: Icons.check_circle_outline,
-                      ),
-
-                      const SizedBox(height: 32),
-
-                      // Botón principal
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: _abrirVideollamada,
-                          icon: const Icon(Icons.video_call, size: 28),
-                          label: const Text(
-                            'Entrar a la consulta',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF2ecc71),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 18),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Volver a mis citas'),
-                      ),
-
-                      const SizedBox(height: 24),
-                      // Info extra
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFd0e8f7),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: const [
-                            Icon(Icons.info_outline, color: Color(0xFF1a3a5c)),
-                            SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                'La videollamada usa Jitsi Meet, una plataforma segura y gratuita. '
-                                'No necesitas crear cuenta.',
-                                style: TextStyle(
-                                    fontSize: 12, color: Color(0xFF1a3a5c)),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.accent.withOpacity(0.35),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.video_call_rounded, color: Colors.white, size: 26),
+                    SizedBox(width: 10),
+                    Text(
+                      'Entrar a la consulta',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Volver a mis citas',
+                style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          const SizedBox(height: 20),
+          // Nota Jitsi
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.primaryLight.withOpacity(0.06),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.lock_rounded, color: AppColors.primaryLight, size: 18),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Videollamada cifrada con Jitsi Meet. No necesitas crear cuenta.',
+                    style: TextStyle(
+                        color: AppColors.textSecondary, fontSize: 12, height: 1.4),
                   ),
                 ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPasos() {
+    final pasos = [
+      (Icons.touch_app_rounded, 'Toca "Entrar a la consulta"',
+          'Se abrirá Jitsi Meet automáticamente.'),
+      (Icons.camera_alt_rounded, 'Permite cámara y micrófono',
+          'Acepta los permisos para que el médico pueda verte.'),
+      (Icons.access_time_rounded, 'Espera al médico',
+          'Permanece en la sala, el médico entrará en breve.'),
+      (Icons.check_circle_outline_rounded, 'Al terminar',
+          'Cierra la pestaña. Tu receta aparecerá en Mis Citas.'),
+    ];
+
+    return Column(
+      children: pasos
+          .asMap()
+          .entries
+          .map((e) => _PasoTile(
+                numero: (e.key + 1).toString(),
+                icon: e.value.$1,
+                titulo: e.value.$2,
+                descripcion: e.value.$3,
+                isLast: e.key == pasos.length - 1,
+              ))
+          .toList(),
     );
   }
 }
 
-class _Paso extends StatelessWidget {
+class _PasoTile extends StatelessWidget {
   final String numero;
+  final IconData icon;
   final String titulo;
   final String descripcion;
-  final IconData icono;
+  final bool isLast;
 
-  const _Paso({
+  const _PasoTile({
     required this.numero,
+    required this.icon,
     required this.titulo,
     required this.descripcion,
-    required this.icono,
+    this.isLast = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+    return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: const Color(0xFF1a3a5c),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Center(
-              child: Text(
-                numero,
-                style: const TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.bold),
+          Column(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [AppColors.primaryLight, AppColors.primary],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    numero,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13),
+                  ),
+                ),
+              ),
+              if (!isLast)
+                Expanded(
+                  child: Container(
+                    width: 1.5,
+                    color: AppColors.cardBorder,
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: isLast ? 0 : 20),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 6),
+                        Text(titulo,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
+                                color: AppColors.textPrimary)),
+                        const SizedBox(height: 3),
+                        Text(descripcion,
+                            style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 12,
+                                height: 1.4)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Icon(icon, color: AppColors.accent, size: 20),
+                  ),
+                ],
               ),
             ),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(titulo,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 14)),
-                const SizedBox(height: 2),
-                Text(descripcion,
-                    style: const TextStyle(color: Colors.grey, fontSize: 13)),
-              ],
-            ),
-          ),
-          Icon(icono, color: const Color(0xFF2ecc71), size: 22),
         ],
       ),
     );
