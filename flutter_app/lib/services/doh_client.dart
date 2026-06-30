@@ -94,12 +94,8 @@ class DohClient {
     return await http.delete(Uri.parse(url), headers: headers).timeout(const Duration(seconds: 20));
   }
 
-  // Para WebSocket: resuelve IP y devuelve URI con IP para conectarse
+  // Para WebSocket: usar hostname directamente (Railway necesita SNI y TLS por nombre)
   static Future<Uri> resolveWsUri(Uri wsUri) async {
-    final ip = await _resolveIp();
-    if (ip != null) {
-      return wsUri.replace(host: ip);
-    }
     return wsUri;
   }
 }

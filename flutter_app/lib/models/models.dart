@@ -36,6 +36,7 @@ class Appointment {
   final String estado;
   final String notas;
   final String receta;
+  final String recetaArchivoNombre;
 
   Appointment({
     required this.id,
@@ -45,6 +46,7 @@ class Appointment {
     required this.estado,
     required this.notas,
     required this.receta,
+    this.recetaArchivoNombre = '',
   });
 
   factory Appointment.fromJson(Map<String, dynamic> j) => Appointment(
@@ -55,6 +57,7 @@ class Appointment {
         estado: j['estado'],
         notas: j['notas_texto'] ?? '',
         receta: j['receta_texto'] ?? '',
+        recetaArchivoNombre: j['receta_archivo_nombre'] ?? '',
       );
 }
 

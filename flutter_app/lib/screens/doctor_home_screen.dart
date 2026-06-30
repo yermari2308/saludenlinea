@@ -1,7 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_file/open_file.dart';
 import '../services/api_service.dart';
 import '../models/models.dart';
 import 'consultation_screen.dart';
+import 'chat_screen.dart';
 import 'login_screen.dart';
 
 class DoctorHomeScreen extends StatefulWidget {
@@ -29,6 +34,74 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     ApiService.getUserInfo().then((info) {
       if (mounted) setState(() => _nombreDoctor = info['nombre'] ?? 'Doctor');
     });
+  }
+
+  Future<void> _finalizar(int citaId) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Finalizar consulta'),
+        content: const Text('¿Confirmas que la consulta ha terminado? El paciente no podrá reingresar.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            child: const Text('Sí, finalizar', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ApiService.finalizarCita(citaId);
+      setState(() => _cargarDatos());
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Consulta finalizada'), backgroundColor: Colors.green),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
+  Future<void> _abrirChat(int citaId) async {
+    final info = await ApiService.getUserInfo();
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChatScreen(
+          citaId: citaId,
+          remitente: 'doctor',
+          remitenteId: info['id'] ?? 0,
+          nombreOtro: 'Paciente',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _subirReceta(int citaId) async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+    );
+    if (result == null || result.files.isEmpty) return;
+    final picked = result.files.first;
+    final bytes = picked.bytes;
+    if (bytes == null) return;
+    try {
+      await ApiService.subirRecetaArchivo(citaId, bytes, picked.name);
+      setState(() => _cargarDatos());
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Receta subida correctamente'), backgroundColor: Colors.green),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
   }
 
   Future<void> _logout() async {
@@ -147,9 +220,11 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                     cita: c,
                     estadoColor: _estadoColor(c.estado),
                     estadoIcon: _estadoIcon(c.estado),
-                    onEntrar: () => Navigator.push(context,
-                        MaterialPageRoute(
-                            builder: (_) => ConsultationScreen(appointmentId: c.id))),
+                    onEntrar: c.estado == 'programada' ? () => Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => ConsultationScreen(appointmentId: c.id))) : null,
+                    onFinalizar: c.estado == 'programada' ? () => _finalizar(c.id) : null,
+                    onChat: c.estado == 'programada' ? () => _abrirChat(c.id) : null,
+                    onSubirReceta: () => _subirReceta(c.id),
                   )),
                   const SizedBox(height: 20),
                 ],
@@ -180,10 +255,11 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                     estadoIcon: _estadoIcon(c.estado),
                     onEntrar: c.estado == 'programada'
                         ? () => Navigator.push(context,
-                            MaterialPageRoute(
-                                builder: (_) =>
-                                    ConsultationScreen(appointmentId: c.id)))
+                            MaterialPageRoute(builder: (_) => ConsultationScreen(appointmentId: c.id)))
                         : null,
+                    onFinalizar: c.estado == 'programada' ? () => _finalizar(c.id) : null,
+                    onChat: c.estado == 'programada' ? () => _abrirChat(c.id) : null,
+                    onSubirReceta: () => _subirReceta(c.id),
                   )),
               ],
             ),
@@ -247,12 +323,19 @@ class _CitaCard extends StatelessWidget {
   final Color estadoColor;
   final IconData estadoIcon;
   final VoidCallback? onEntrar;
+  final VoidCallback? onFinalizar;
+  final VoidCallback? onChat;
+  final VoidCallback? onSubirReceta;
 
-  const _CitaCard(
-      {required this.cita,
-      required this.estadoColor,
-      required this.estadoIcon,
-      this.onEntrar});
+  const _CitaCard({
+    required this.cita,
+    required this.estadoColor,
+    required this.estadoIcon,
+    this.onEntrar,
+    this.onFinalizar,
+    this.onChat,
+    this.onSubirReceta,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -265,53 +348,113 @@ class _CitaCard extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(14),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(
-              backgroundColor: estadoColor.withOpacity(.15),
-              child: Icon(estadoIcon, color: estadoColor, size: 22),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Paciente #${cita.pacienteId}',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 14)),
-                  const SizedBox(height: 2),
-                  Text(fechaStr,
-                      style:
-                          const TextStyle(fontSize: 12, color: Colors.grey)),
-                  const SizedBox(height: 4),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                        color: estadoColor.withOpacity(.12),
-                        borderRadius: BorderRadius.circular(20)),
-                    child: Text(cita.estado.toUpperCase(),
-                        style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: estadoColor)),
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: estadoColor.withOpacity(.15),
+                  child: Icon(estadoIcon, color: estadoColor, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Paciente #${cita.pacienteId}',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      const SizedBox(height: 2),
+                      Text(fechaStr, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                            color: estadoColor.withOpacity(.12),
+                            borderRadius: BorderRadius.circular(20)),
+                        child: Text(cita.estado.toUpperCase(),
+                            style: TextStyle(
+                                fontSize: 10, fontWeight: FontWeight.bold, color: estadoColor)),
+                      ),
+                    ],
                   ),
+                ),
+                if (onEntrar != null)
+                  ElevatedButton(
+                    onPressed: onEntrar,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1a3a5c),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: const Text('Entrar', style: TextStyle(fontSize: 13)),
+                  ),
+              ],
+            ),
+            if (cita.estado == 'programada') ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  if (onChat != null)
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.chat_bubble_outline, size: 16),
+                        label: const Text('Chat', style: TextStyle(fontSize: 12)),
+                        onPressed: onChat,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF1976D2),
+                          side: const BorderSide(color: Color(0xFF1976D2)),
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                        ),
+                      ),
+                    ),
+                  if (onChat != null && onSubirReceta != null) const SizedBox(width: 8),
+                  if (onSubirReceta != null)
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.upload_file, size: 16),
+                        label: const Text('Receta', style: TextStyle(fontSize: 12)),
+                        onPressed: onSubirReceta,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF2ecc71),
+                          side: const BorderSide(color: Color(0xFF2ecc71)),
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                        ),
+                      ),
+                    ),
+                  if (onFinalizar != null) ...[
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.check_circle, size: 16, color: Colors.white),
+                        label: const Text('Finalizar', style: TextStyle(fontSize: 12, color: Colors.white)),
+                        onPressed: onFinalizar,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
-            ),
-            if (onEntrar != null)
-              ElevatedButton(
-                onPressed: onEntrar,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1a3a5c),
-                  foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
+            ],
+            if (cita.estado == 'completada' && cita.recetaArchivoNombre.isEmpty && onSubirReceta != null) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.upload_file, size: 16),
+                  label: const Text('Subir receta PDF', style: TextStyle(fontSize: 13)),
+                  onPressed: onSubirReceta,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF1a3a5c),
+                    side: const BorderSide(color: Color(0xFF1a3a5c)),
+                  ),
                 ),
-                child: const Text('Entrar', style: TextStyle(fontSize: 13)),
               ),
+            ],
           ],
         ),
       ),

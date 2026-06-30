@@ -15,6 +15,7 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
   bool _loading = true;
   String? _jitsiUrl;
   String? _error;
+  bool _finalizada = false;
 
   @override
   void initState() {
@@ -30,10 +31,12 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
         _loading = false;
       });
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _loading = false;
-      });
+      final msg = e.toString();
+      if (msg.contains('finalizada')) {
+        setState(() { _finalizada = true; _loading = false; });
+      } else {
+        setState(() { _error = msg; _loading = false; });
+      }
     }
   }
 
@@ -66,7 +69,37 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : _error != null
+          : _finalizada
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.check_circle, size: 80, color: Color(0xFF2ecc71)),
+                        const SizedBox(height: 24),
+                        const Text('Consulta Finalizada',
+                            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold,
+                                color: Color(0xFF1a3a5c))),
+                        const SizedBox(height: 12),
+                        const Text('Esta consulta ya fue completada. Revisa "Mis Citas" para ver tu receta.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.grey, fontSize: 15)),
+                        const SizedBox(height: 28),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF1a3a5c),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                          ),
+                          child: const Text('Volver a mis citas'),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : _error != null
               ? Center(
                   child: Padding(
                     padding: const EdgeInsets.all(24),

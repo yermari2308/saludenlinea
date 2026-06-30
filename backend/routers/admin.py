@@ -224,7 +224,11 @@ def admin_doctors(db: Session = Depends(get_db), _=Depends(check_session), msg: 
           <td>⭐ {d.calificacion:.1f}</td>
           <td><span style="background:{estado_color};color:#fff;padding:3px 10px;border-radius:12px;font-size:12px">{estado_txt}</span></td>
           <td style="font-size:12px;color:#666">{str(d.creado_en)[:16]}</td>
-          <td><a href="/admin/doctors/toggle/{d.id}" style="color:#1976D2">{'Desactivar' if d.activo else 'Activar'}</a></td>
+          <td>
+            <a href="/admin/doctors/toggle/{d.id}" style="color:#1976D2">{'Desactivar' if d.activo else 'Activar'}</a>
+            &nbsp;|&nbsp;
+            <a href="/admin/doctors/eliminar/{d.id}" onclick="return confirm('¿Eliminar a {nombre}? Esta acción no se puede deshacer.')" style="color:#D32F2F">✕ Eliminar</a>
+          </td>
         </tr>"""
 
     alerta = f'<div style="background:#e8f5e9;border-left:4px solid #388E3C;padding:12px 16px;margin:16px 24px;border-radius:4px">{msg}</div>' if msg else ""
@@ -359,3 +363,14 @@ def toggle_doctor(doctor_id: int, db: Session = Depends(get_db), _=Depends(check
     doctor.activo = not doctor.activo
     db.commit()
     return RedirectResponse(url="/admin/doctors", status_code=303)
+
+
+@router.get("/doctors/eliminar/{doctor_id}")
+def eliminar_doctor(doctor_id: int, db: Session = Depends(get_db), _=Depends(check_session)):
+    doctor = db.query(Doctor).filter(Doctor.id == doctor_id).first()
+    if not doctor:
+        raise HTTPException(status_code=404, detail="No encontrado")
+    nombre = doctor.nombre
+    db.delete(doctor)
+    db.commit()
+    return RedirectResponse(url=f"/admin/doctors?msg=Médico+{nombre}+eliminado+permanentemente", status_code=303)

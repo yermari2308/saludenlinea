@@ -92,6 +92,7 @@ class AppointmentOut(BaseModel):
     estado: str
     notas_texto: str
     receta_texto: str
+    receta_archivo_nombre: str
     creado_en: datetime
 
     model_config = {"from_attributes": True}
@@ -100,6 +101,10 @@ class AppointmentOut(BaseModel):
 class NotasUpdate(BaseModel):
     notas_texto: Optional[str] = ""
     receta_texto: Optional[str] = ""
+
+
+class RescheduleRequest(BaseModel):
+    fecha_hora: datetime
 
 
 # ── Payments ──────────────────────────────────────────────────────────────────

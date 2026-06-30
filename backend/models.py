@@ -50,6 +50,8 @@ class Appointment(Base):
     estado = Column(String(30), default="programada")  # programada|completada|cancelada
     notas_texto = Column(Text, default="")
     receta_texto = Column(Text, default="")
+    receta_archivo_nombre = Column(String(255), default="")
+    receta_archivo_b64 = Column(Text, default="")
     creado_en = Column(DateTime, default=datetime.utcnow)
 
     paciente = relationship("Patient", back_populates="citas")

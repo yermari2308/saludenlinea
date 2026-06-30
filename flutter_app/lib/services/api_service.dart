@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
@@ -175,6 +176,46 @@ class ApiService {
       headers: await _headers(),
     );
     return _parse(res);
+  }
+
+  static Future<void> finalizarCita(int appointmentId) async {
+    final res = await DohClient.post(
+      '$baseUrl/api/appointments/$appointmentId/finalizar',
+      headers: await _headers(),
+    );
+    _parse(res);
+  }
+
+  static Future<Appointment> reagendarCita(int appointmentId, DateTime nuevaFecha) async {
+    final res = await DohClient.put(
+      '$baseUrl/api/appointments/$appointmentId/reagendar',
+      headers: await _headers(),
+      body: jsonEncode({'fecha_hora': nuevaFecha.toIso8601String()}),
+    );
+    return Appointment.fromJson(_parse(res));
+  }
+
+  static Future<void> subirRecetaArchivo(int appointmentId, Uint8List bytes, String nombre) async {
+    final token = await getToken();
+    final uri = Uri.parse('$baseUrl/api/appointments/$appointmentId/receta-archivo');
+    final req = http.MultipartRequest('POST', uri);
+    if (token != null) req.headers['Authorization'] = 'Bearer $token';
+    req.files.add(http.MultipartFile.fromBytes('archivo', bytes, filename: nombre));
+    final streamed = await req.send();
+    final res = await http.Response.fromStream(streamed);
+    _parse(res);
+  }
+
+  static Future<Uint8List> descargarRecetaArchivo(int appointmentId) async {
+    final res = await DohClient.get(
+      '$baseUrl/api/appointments/$appointmentId/receta-archivo',
+      headers: await _headers(),
+    );
+    if (res.statusCode >= 400) {
+      final body = jsonDecode(utf8.decode(res.bodyBytes));
+      throw ApiException(body['detail'] ?? 'Error', res.statusCode);
+    }
+    return res.bodyBytes;
   }
 
   // ── Doctor Leads ─────────────────────────────────────────────────────────
