@@ -115,15 +115,19 @@ async def mp_webhook(request: Request, db: Session = Depends(get_db)):
     """
     body = await request.body()
 
-    # Verificar firma de MP (seguridad)
-    if MP_WEBHOOK_SECRET:
-        sig = request.headers.get("x-signature", "")
-        ts = request.headers.get("x-request-id", "")
-        expected = hmac.new(
-            MP_WEBHOOK_SECRET.encode(), f"{ts}:{body.decode()}".encode(), hashlib.sha256
-        ).hexdigest()
-        if not hmac.compare_digest(sig, f"ts={ts},v1={expected}"):
-            raise HTTPException(status_code=401, detail="Firma inválida")
+    # Siempre verificar firma — rechazar si no hay secret configurado
+    if not MP_WEBHOOK_SECRET:
+        raise HTTPException(status_code=503, detail="Webhook no configurado")
+
+    sig_header = request.headers.get("x-signature", "")
+    req_id = request.headers.get("x-request-id", "")
+    expected = hmac.new(
+        MP_WEBHOOK_SECRET.encode(),
+        f"{req_id}:{body.decode()}".encode(),
+        hashlib.sha256,
+    ).hexdigest()
+    if not hmac.compare_digest(sig_header, f"ts={req_id},v1={expected}"):
+        raise HTTPException(status_code=401, detail="Firma inválida")
 
     data = await request.json()
     topic = data.get("type") or data.get("topic")

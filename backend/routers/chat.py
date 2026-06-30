@@ -1,11 +1,13 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from typing import Dict, List
 import json
 from datetime import datetime
 
 from database import get_db
 from models import ChatMessage, Appointment
+from utils.auth import get_current_user
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
@@ -87,7 +89,19 @@ async def chat_ws(
 
 
 @router.get("/{cita_id}")
-def get_historial(cita_id: int, db: Session = Depends(get_db)):
+def get_historial(cita_id: int, db: Session = Depends(get_db), current=Depends(get_current_user)):
+    user_id = int(current["sub"])
+    role = current.get("role")
+
+    # Verificar que la cita pertenece al usuario (paciente o doctor)
+    cita = db.query(Appointment).filter(Appointment.id == cita_id).first()
+    if not cita:
+        raise HTTPException(status_code=404, detail="Cita no encontrada")
+    if role == "patient" and cita.paciente_id != user_id:
+        raise HTTPException(status_code=403, detail="Sin acceso a esta cita")
+    if role == "doctor" and cita.doctor_id != user_id:
+        raise HTTPException(status_code=403, detail="Sin acceso a esta cita")
+
     mensajes = (
         db.query(ChatMessage)
         .filter(ChatMessage.cita_id == cita_id)

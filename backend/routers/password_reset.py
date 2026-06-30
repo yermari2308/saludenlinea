@@ -66,7 +66,7 @@ def _send_reset_email(to_email: str, nombre: str, token: str):
 
 
 @router.post("/forgot-password")
-@limiter.limit("3/minute")
+@limiter.limit("3/minute;10/hour")
 def forgot_password(request: Request, data: ForgotPasswordRequest, db: Session = Depends(get_db)):
     user = db.query(Patient).filter(Patient.email == data.email).first()
     role = "patient"
@@ -99,7 +99,8 @@ def forgot_password(request: Request, data: ForgotPasswordRequest, db: Session =
 
 
 @router.post("/reset-password")
-def reset_password(data: ResetPasswordRequest, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def reset_password(request: Request, data: ResetPasswordRequest, db: Session = Depends(get_db)):
     if len(data.new_password) < 6:
         raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 6 caracteres")
 
