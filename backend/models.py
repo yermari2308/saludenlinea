@@ -114,3 +114,15 @@ class ConsultSession(Base):
     detalle_calidad = Column(String(50), default="")
 
     cita = relationship("Appointment", back_populates="sesion")
+
+
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    token = Column(String(64), unique=True, nullable=False, index=True)
+    email = Column(String(150), nullable=False)
+    role = Column(String(20), nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    used = Column(Boolean, default=False)
+    creado_en = Column(DateTime, default=datetime.utcnow)

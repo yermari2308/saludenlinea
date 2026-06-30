@@ -1,23 +1,32 @@
 """
-Panel admin simple — accesible via navegador en /admin/leads y /admin/doctors
-Protegido con API key en header o query param.
+Panel admin — protegido con HTTP Basic Auth (usuario: admin, contraseña: ADMIN_KEY).
+Accesible en /admin/leads y /admin/doctors via navegador.
 """
 import os
+import secrets as secrets_lib
 import bcrypt
-from fastapi import APIRouter, Depends, HTTPException, Query, Form
+from fastapi import APIRouter, Depends, HTTPException, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from sqlalchemy.orm import Session
 from database import get_db
 from models import DoctorLead, Doctor
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+security = HTTPBasic()
 
 ADMIN_KEY = os.getenv("ADMIN_KEY", "saludenlinea-admin-2025")
 
 
-def check_key(key: str = Query(..., alias="key")):
-    if key != ADMIN_KEY:
-        raise HTTPException(status_code=403, detail="Clave inválida")
+def check_key(credentials: HTTPBasicCredentials = Depends(security)):
+    correct_user = secrets_lib.compare_digest(credentials.username.encode(), b"admin")
+    correct_pass = secrets_lib.compare_digest(credentials.password.encode(), ADMIN_KEY.encode())
+    if not (correct_user and correct_pass):
+        raise HTTPException(
+            status_code=401,
+            detail="Clave inválida",
+            headers={"WWW-Authenticate": "Basic"},
+        )
 
 
 @router.get("/leads", response_class=HTMLResponse)
@@ -47,9 +56,9 @@ def admin_leads(db: Session = Depends(get_db), _=Depends(check_key)):
           <td><span style="background:{color};color:#fff;padding:3px 10px;border-radius:12px;font-size:12px">{l.estado.upper()}</span></td>
           <td style="font-size:12px;color:#666">{str(l.creado_en)[:16]}</td>
           <td>
-            <a href="/admin/leads/estado/{l.id}/contactado?key={ADMIN_KEY}" style="color:#1976D2">✓ Contactado</a> |
-            <a href="/admin/leads/estado/{l.id}/activo?key={ADMIN_KEY}" style="color:#388E3C">✓ Activo</a> |
-            <a href="/admin/leads/estado/{l.id}/rechazado?key={ADMIN_KEY}" style="color:#D32F2F">✗ Rechazar</a>
+            <a href="/admin/leads/estado/{l.id}/contactado" style="color:#1976D2">✓ Contactado</a> |
+            <a href="/admin/leads/estado/{l.id}/activo" style="color:#388E3C">✓ Activo</a> |
+            <a href="/admin/leads/estado/{l.id}/rechazado" style="color:#D32F2F">✗ Rechazar</a>
           </td>
         </tr>"""
 
@@ -79,7 +88,7 @@ def admin_leads(db: Session = Depends(get_db), _=Depends(check_key)):
 <body>
   <div class="header" style="display:flex;justify-content:space-between;align-items:center">
     <h1>🏥 SaludEnLínea — Solicitudes de Médicos</h1>
-    <nav><a href="/admin/doctors?key={ADMIN_KEY}" style="color:#fff;margin-left:16px;text-decoration:none">➕ Médicos</a></nav>
+    <nav><a href="/admin/doctors" style="color:#fff;margin-left:16px;text-decoration:none">➕ Médicos</a></nav>
   </div>
   <div class="stats">
     <div class="stat"><div class="num">{total}</div><div>Total solicitudes</div></div>
@@ -96,7 +105,7 @@ def admin_leads(db: Session = Depends(get_db), _=Depends(check_key)):
     <tbody>{filas if filas else '<tr><td colspan="10" style="text-align:center;padding:40px;color:#999">No hay solicitudes aún</td></tr>'}</tbody>
   </table>
   <p style="text-align:center;color:#999;margin:20px;font-size:12px">
-    Actualizar: <a href="/admin/leads?key={ADMIN_KEY}">↺ Recargar</a>
+    Actualizar: <a href="/admin/leads">↺ Recargar</a>
   </p>
 </body>
 </html>"""
@@ -114,7 +123,7 @@ def cambiar_estado(
         raise HTTPException(status_code=404, detail="No encontrado")
     lead.estado = nuevo_estado
     db.commit()
-    return RedirectResponse(url=f"/admin/leads?key={ADMIN_KEY}")
+    return RedirectResponse(url=f"/admin/leads")
 
 
 # ──────────────────────────────────────────
@@ -129,7 +138,7 @@ def admin_doctors(db: Session = Depends(get_db), _=Depends(check_key), msg: str 
     for d in doctors:
         estado_color = "#388E3C" if d.activo else "#D32F2F"
         estado_txt = "Activo" if d.activo else "Inactivo"
-        toggle_url = f"/admin/doctors/toggle/{d.id}?key={ADMIN_KEY}"
+        toggle_url = f"/admin/doctors/toggle/{d.id}"
         filas += f"""
         <tr>
           <td>{d.id}</td>
@@ -176,8 +185,8 @@ def admin_doctors(db: Session = Depends(get_db), _=Depends(check_key), msg: str 
   <div class="header">
     <h1>🏥 SaludEnLínea — Panel Admin</h1>
     <nav class="nav">
-      <a href="/admin/doctors?key={ADMIN_KEY}">Médicos</a>
-      <a href="/admin/leads?key={ADMIN_KEY}">Solicitudes</a>
+      <a href="/admin/doctors">Médicos</a>
+      <a href="/admin/leads">Solicitudes</a>
     </nav>
   </div>
 
@@ -185,7 +194,7 @@ def admin_doctors(db: Session = Depends(get_db), _=Depends(check_key), msg: str 
 
   <div class="card">
     <h2>➕ Agregar Médico</h2>
-    <form method="post" action="/admin/doctors/crear?key={ADMIN_KEY}">
+    <form method="post" action="/admin/doctors/crear">
       <div class="form-row">
         <div class="form-group">
           <label>Nombre completo *</label>
@@ -263,7 +272,7 @@ def crear_doctor(
     )
     db.add(doctor)
     db.commit()
-    return RedirectResponse(url=f"/admin/doctors?key={ADMIN_KEY}&msg=Médico+{nombre}+creado+exitosamente", status_code=303)
+    return RedirectResponse(url=f"/admin/doctors&msg=Médico+{nombre}+creado+exitosamente", status_code=303)
 
 
 @router.get("/doctors/toggle/{doctor_id}")
@@ -273,4 +282,4 @@ def toggle_doctor(doctor_id: int, db: Session = Depends(get_db), _=Depends(check
         raise HTTPException(status_code=404, detail="No encontrado")
     doctor.activo = not doctor.activo
     db.commit()
-    return RedirectResponse(url=f"/admin/doctors?key={ADMIN_KEY}")
+    return RedirectResponse(url=f"/admin/doctors")

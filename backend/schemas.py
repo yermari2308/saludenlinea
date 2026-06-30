@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
@@ -15,17 +15,17 @@ class TokenResponse(BaseModel):
 
 class LoginRequest(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(..., max_length=200)
 
 
 # ── Patients ──────────────────────────────────────────────────────────────────
 
 class PatientCreate(BaseModel):
-    nombre: str
+    nombre: str = Field(..., max_length=100)
     email: EmailStr
-    password: str
-    telefono: Optional[str] = None
-    fecha_nacimiento: Optional[str] = None
+    password: str = Field(..., max_length=200)
+    telefono: Optional[str] = Field(None, max_length=20)
+    fecha_nacimiento: Optional[str] = Field(None, max_length=20)
 
     @field_validator("password")
     @classmethod
@@ -56,11 +56,11 @@ class PatientOut(BaseModel):
 # ── Doctors ───────────────────────────────────────────────────────────────────
 
 class DoctorCreate(BaseModel):
-    nombre: str
+    nombre: str = Field(..., max_length=100)
     email: EmailStr
-    password: str
-    especialidad: str
-    credenciales: Optional[str] = ""
+    password: str = Field(..., max_length=200)
+    especialidad: str = Field(..., max_length=100)
+    credenciales: Optional[str] = Field("", max_length=500)
     tarifa: Optional[float] = 15.0
 
 

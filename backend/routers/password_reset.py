@@ -7,7 +7,7 @@ from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
 from database import get_db
-from models import Patient, Doctor
+from models import Patient, Doctor, PasswordResetToken
 from utils.auth import hash_password
 import httpx
 
@@ -16,11 +16,6 @@ router = APIRouter(prefix="/api/auth", tags=["password-reset"])
 
 RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
 FROM_EMAIL = os.getenv("FROM_EMAIL", "onboarding@resend.dev")
-BASE_URL = os.getenv("BASE_URL", "https://saludenlinea-production.up.railway.app")
-
-# Almacenamiento en memoria (suficiente para MVP)
-# token -> {email, role, expires}
-_reset_tokens: dict[str, dict] = {}
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -33,7 +28,7 @@ class ResetPasswordRequest(BaseModel):
 
 
 def _send_reset_email(to_email: str, nombre: str, token: str):
-    reset_link = f"saludenlinea://reset-password?token={token}"
+    code = token[:8].upper()
     html = f"""
     <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;">
       <div style="background: #1a3a5c; padding: 24px; border-radius: 8px 8px 0 0;">
@@ -45,7 +40,7 @@ def _send_reset_email(to_email: str, nombre: str, token: str):
         <p>Recibimos una solicitud para restablecer tu contraseña. Usa el código de abajo en la app:</p>
         <div style="background: white; border: 2px solid #2ecc71; border-radius: 8px; padding: 20px; text-align: center; margin: 24px 0;">
           <p style="font-size: 13px; color: #666; margin: 0 0 8px 0;">Tu código de recuperación:</p>
-          <code style="font-size: 28px; font-weight: bold; color: #1a3a5c; letter-spacing: 4px;">{token[:8].upper()}</code>
+          <code style="font-size: 28px; font-weight: bold; color: #1a3a5c; letter-spacing: 4px;">{code}</code>
         </div>
         <p style="color: #666; font-size: 13px;">Este código expira en <strong>1 hora</strong>. Si no solicitaste esto, ignora este correo.</p>
         <hr style="border: none; border-top: 1px solid #ddd; margin: 24px 0;">
@@ -55,9 +50,8 @@ def _send_reset_email(to_email: str, nombre: str, token: str):
     """
 
     if not RESEND_API_KEY:
-        return  # silently skip in dev
+        return
 
-    import httpx
     httpx.post(
         "https://api.resend.com/emails",
         headers={"Authorization": f"Bearer {RESEND_API_KEY}"},
@@ -80,16 +74,25 @@ def forgot_password(request: Request, data: ForgotPasswordRequest, db: Session =
         user = db.query(Doctor).filter(Doctor.email == data.email).first()
         role = "doctor"
 
-    # Siempre responder OK para no revelar si el email existe
     if not user:
         return {"message": "Si el correo existe, recibirás instrucciones."}
 
+    # Invalidar tokens anteriores del mismo email
+    db.query(PasswordResetToken).filter(
+        PasswordResetToken.email == data.email,
+        PasswordResetToken.used == False,
+    ).update({"used": True})
+    db.commit()
+
     token = secrets.token_hex(16)
-    _reset_tokens[token] = {
-        "email": data.email,
-        "role": role,
-        "expires": datetime.utcnow() + timedelta(hours=1),
-    }
+    reset_token = PasswordResetToken(
+        token=token,
+        email=data.email,
+        role=role,
+        expires_at=datetime.utcnow() + timedelta(hours=1),
+    )
+    db.add(reset_token)
+    db.commit()
 
     _send_reset_email(data.email, user.nombre, token)
     return {"message": "Si el correo existe, recibirás instrucciones."}
@@ -100,39 +103,38 @@ def reset_password(data: ResetPasswordRequest, db: Session = Depends(get_db)):
     if len(data.new_password) < 6:
         raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 6 caracteres")
 
-    # Buscar token (exacto o por prefijo de 8 chars en mayúscula)
-    entry = _reset_tokens.get(data.token)
-    if not entry:
-        # Buscar por código corto (los primeros 8 chars en hex)
-        code = data.token.lower()
-        for tok, val in _reset_tokens.items():
-            if tok[:8] == code:
-                entry = val
-                token_key = tok
-                break
-        else:
-            raise HTTPException(status_code=400, detail="Código inválido o expirado")
-        token_key = [t for t in _reset_tokens if t[:8] == code][0]
-    else:
-        token_key = data.token
+    code = data.token.lower()
 
-    if datetime.utcnow() > entry["expires"]:
-        del _reset_tokens[token_key]
+    # Buscar por token completo o por prefijo de 8 chars
+    entry = db.query(PasswordResetToken).filter(
+        PasswordResetToken.token == code,
+        PasswordResetToken.used == False,
+    ).first()
+
+    if not entry:
+        entry = db.query(PasswordResetToken).filter(
+            PasswordResetToken.used == False,
+        ).all()
+        entry = next((e for e in entry if e.token[:8] == code[:8]), None)
+
+    if not entry:
+        raise HTTPException(status_code=400, detail="Código inválido o expirado")
+
+    if datetime.utcnow() > entry.expires_at:
+        entry.used = True
+        db.commit()
         raise HTTPException(status_code=400, detail="El código ha expirado")
 
-    email = entry["email"]
-    role = entry["role"]
-
-    if role == "patient":
-        user = db.query(Patient).filter(Patient.email == email).first()
+    if entry.role == "patient":
+        user = db.query(Patient).filter(Patient.email == entry.email).first()
     else:
-        user = db.query(Doctor).filter(Doctor.email == email).first()
+        user = db.query(Doctor).filter(Doctor.email == entry.email).first()
 
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
     user.pass_hash = hash_password(data.new_password)
+    entry.used = True
     db.commit()
-    del _reset_tokens[token_key]
 
     return {"message": "Contraseña actualizada correctamente"}
