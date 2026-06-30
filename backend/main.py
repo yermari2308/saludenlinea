@@ -28,6 +28,22 @@ logger = logging.getLogger("saludenlinea")
 
 Base.metadata.create_all(bind=engine)
 
+# Migraciones manuales: agregar columnas nuevas si no existen (PostgreSQL)
+def _run_migrations():
+    with engine.connect() as conn:
+        migrations = [
+            "ALTER TABLE appointments ADD COLUMN IF NOT EXISTS receta_archivo_nombre VARCHAR(255) DEFAULT ''",
+            "ALTER TABLE appointments ADD COLUMN IF NOT EXISTS receta_archivo_b64 TEXT DEFAULT ''",
+        ]
+        for sql in migrations:
+            try:
+                conn.execute(__import__("sqlalchemy").text(sql))
+                conn.commit()
+            except Exception as e:
+                logger.warning("Migración omitida: %s — %s", sql[:60], e)
+
+_run_migrations()
+
 limiter = Limiter(key_func=get_remote_address)
 
 ENV = os.getenv("ENV", "production")
