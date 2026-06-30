@@ -1,37 +1,100 @@
 """
-Panel admin — protegido con HTTP Basic Auth (usuario: admin, contraseña: ADMIN_KEY).
-Accesible en /admin/leads y /admin/doctors via navegador.
+Panel admin — login con formulario HTML + cookie de sesión segura.
+Accesible en /admin/login (para iniciar sesión) y luego /admin/doctors, /admin/leads.
 """
 import os
 import secrets as secrets_lib
 import bcrypt
-from fastapi import APIRouter, Depends, HTTPException, Form
-from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi import APIRouter, Depends, Cookie, Form, HTTPException, Request
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 from database import get_db
 from models import DoctorLead, Doctor
 
 router = APIRouter(prefix="/admin", tags=["admin"])
-security = HTTPBasic()
 
 ADMIN_KEY = os.getenv("ADMIN_KEY", "saludenlinea-admin-2025")
+COOKIE_NAME = "admin_session"
+
+# Token de sesión generado en memoria al arrancar; si el server reinicia, hay que volver a loguearse
+_session_token: str = secrets_lib.token_hex(32)
 
 
-def check_key(credentials: HTTPBasicCredentials = Depends(security)):
-    correct_user = secrets_lib.compare_digest(credentials.username.encode(), b"admin")
-    correct_pass = secrets_lib.compare_digest(credentials.password.encode(), ADMIN_KEY.encode())
-    if not (correct_user and correct_pass):
-        raise HTTPException(
-            status_code=401,
-            detail="Clave inválida",
-            headers={"WWW-Authenticate": "Basic"},
-        )
+def _login_page(error: str = "") -> str:
+    error_html = f'<p style="color:#D32F2F;margin:0 0 16px">{error}</p>' if error else ""
+    return f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin — SaludEnLínea</title>
+  <style>
+    body {{ font-family: Arial, sans-serif; margin: 0; background: #1a3a5c;
+           display:flex; align-items:center; justify-content:center; min-height:100vh; }}
+    .box {{ background:#fff; padding:40px 36px; border-radius:12px; width:320px;
+            box-shadow:0 8px 32px rgba(0,0,0,.25); }}
+    h1 {{ margin:0 0 24px; font-size:22px; color:#1a3a5c; text-align:center; }}
+    label {{ display:block; font-size:12px; color:#555; font-weight:bold; margin-bottom:4px; }}
+    input {{ width:100%; box-sizing:border-box; padding:10px 12px; border:1px solid #ddd;
+             border-radius:6px; font-size:14px; margin-bottom:16px; }}
+    input:focus {{ outline:none; border-color:#1a3a5c; }}
+    button {{ width:100%; background:#1a3a5c; color:#fff; border:none; padding:12px;
+              border-radius:6px; font-size:15px; cursor:pointer; font-weight:bold; }}
+    button:hover {{ background:#2ecc71; }}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>🏥 SaludEnLínea<br><small style="font-size:14px;font-weight:normal;color:#666">Panel Admin</small></h1>
+    {error_html}
+    <form method="post" action="/admin/login">
+      <label>Contraseña</label>
+      <input type="password" name="password" autofocus placeholder="Ingresa la clave admin">
+      <button type="submit">Entrar</button>
+    </form>
+  </div>
+</body>
+</html>"""
 
+
+def check_session(admin_session: str = Cookie(default=None)):
+    if not admin_session or not secrets_lib.compare_digest(admin_session, _session_token):
+        raise HTTPException(status_code=302, headers={"Location": "/admin/login"})
+
+
+# ── Login ──────────────────────────────────────────────────────────────────────
+
+@router.get("/login", response_class=HTMLResponse)
+def login_page():
+    return _login_page()
+
+
+@router.post("/login")
+def login_post(response: Response, password: str = Form(...)):
+    if not secrets_lib.compare_digest(password.encode(), ADMIN_KEY.encode()):
+        return HTMLResponse(_login_page(error="Contraseña incorrecta"), status_code=401)
+    resp = RedirectResponse(url="/admin/doctors", status_code=303)
+    resp.set_cookie(
+        key=COOKIE_NAME,
+        value=_session_token,
+        httponly=True,
+        samesite="strict",
+        max_age=60 * 60 * 8,  # 8 horas
+    )
+    return resp
+
+
+@router.get("/logout")
+def logout():
+    resp = RedirectResponse(url="/admin/login", status_code=303)
+    resp.delete_cookie(COOKIE_NAME)
+    return resp
+
+
+# ── Leads ──────────────────────────────────────────────────────────────────────
 
 @router.get("/leads", response_class=HTMLResponse)
-def admin_leads(db: Session = Depends(get_db), _=Depends(check_key)):
-    """Panel HTML para ver solicitudes de médicos sin necesidad de app."""
+def admin_leads(db: Session = Depends(get_db), _=Depends(check_session)):
     leads = db.query(DoctorLead).order_by(DoctorLead.creado_en.desc()).all()
 
     colores = {
@@ -73,12 +136,14 @@ def admin_leads(db: Session = Depends(get_db), _=Depends(check_key)):
   <title>SaludEnLínea — Admin</title>
   <style>
     body {{ font-family: Arial, sans-serif; margin: 0; background: #f5f5f5; }}
-    .header {{ background: #1976D2; color: #fff; padding: 16px 24px; }}
+    .header {{ background: #1976D2; color: #fff; padding: 16px 24px; display:flex; justify-content:space-between; align-items:center; }}
     .header h1 {{ margin: 0; font-size: 22px; }}
+    .nav a {{ color:#fff; margin-left:16px; text-decoration:none; }}
     .stats {{ display: flex; gap: 16px; padding: 16px 24px; }}
     .stat {{ background: #fff; padding: 12px 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.1); }}
     .stat .num {{ font-size: 28px; font-weight: bold; color: #1976D2; }}
-    table {{ width: 100%; border-collapse: collapse; background: #fff; margin: 0 24px; width: calc(100% - 48px); border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.1); }}
+    table {{ width: calc(100% - 48px); border-collapse: collapse; background: #fff; margin: 0 24px;
+             border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.1); }}
     th {{ background: #1976D2; color: #fff; padding: 10px 12px; text-align: left; font-size: 13px; }}
     td {{ padding: 10px 12px; border-bottom: 1px solid #f0f0f0; font-size: 13px; vertical-align: middle; }}
     tr:hover {{ background: #f9f9f9; }}
@@ -86,9 +151,12 @@ def admin_leads(db: Session = Depends(get_db), _=Depends(check_key)):
   </style>
 </head>
 <body>
-  <div class="header" style="display:flex;justify-content:space-between;align-items:center">
+  <div class="header">
     <h1>🏥 SaludEnLínea — Solicitudes de Médicos</h1>
-    <nav><a href="/admin/doctors" style="color:#fff;margin-left:16px;text-decoration:none">➕ Médicos</a></nav>
+    <nav class="nav">
+      <a href="/admin/doctors">➕ Médicos</a>
+      <a href="/admin/logout" style="opacity:.7">Salir</a>
+    </nav>
   </div>
   <div class="stats">
     <div class="stat"><div class="num">{total}</div><div>Total solicitudes</div></div>
@@ -105,7 +173,7 @@ def admin_leads(db: Session = Depends(get_db), _=Depends(check_key)):
     <tbody>{filas if filas else '<tr><td colspan="10" style="text-align:center;padding:40px;color:#999">No hay solicitudes aún</td></tr>'}</tbody>
   </table>
   <p style="text-align:center;color:#999;margin:20px;font-size:12px">
-    Actualizar: <a href="/admin/leads">↺ Recargar</a>
+    <a href="/admin/leads">↺ Recargar</a>
   </p>
 </body>
 </html>"""
@@ -116,29 +184,26 @@ def cambiar_estado(
     lead_id: int,
     nuevo_estado: str,
     db: Session = Depends(get_db),
-    _=Depends(check_key),
+    _=Depends(check_session),
 ):
     lead = db.query(DoctorLead).filter(DoctorLead.id == lead_id).first()
     if not lead:
         raise HTTPException(status_code=404, detail="No encontrado")
     lead.estado = nuevo_estado
     db.commit()
-    return RedirectResponse(url=f"/admin/leads")
+    return RedirectResponse(url="/admin/leads", status_code=303)
 
 
-# ──────────────────────────────────────────
-#  PANEL DE MÉDICOS
-# ──────────────────────────────────────────
+# ── Doctors ────────────────────────────────────────────────────────────────────
 
 @router.get("/doctors", response_class=HTMLResponse)
-def admin_doctors(db: Session = Depends(get_db), _=Depends(check_key), msg: str = ""):
+def admin_doctors(db: Session = Depends(get_db), _=Depends(check_session), msg: str = ""):
     doctors = db.query(Doctor).order_by(Doctor.creado_en.desc()).all()
 
     filas = ""
     for d in doctors:
         estado_color = "#388E3C" if d.activo else "#D32F2F"
         estado_txt = "Activo" if d.activo else "Inactivo"
-        toggle_url = f"/admin/doctors/toggle/{d.id}"
         filas += f"""
         <tr>
           <td>{d.id}</td>
@@ -149,7 +214,7 @@ def admin_doctors(db: Session = Depends(get_db), _=Depends(check_key), msg: str 
           <td>⭐ {d.calificacion:.1f}</td>
           <td><span style="background:{estado_color};color:#fff;padding:3px 10px;border-radius:12px;font-size:12px">{estado_txt}</span></td>
           <td style="font-size:12px;color:#666">{str(d.creado_en)[:16]}</td>
-          <td><a href="{toggle_url}" style="color:#1976D2">{'Desactivar' if d.activo else 'Activar'}</a></td>
+          <td><a href="/admin/doctors/toggle/{d.id}" style="color:#1976D2">{'Desactivar' if d.activo else 'Activar'}</a></td>
         </tr>"""
 
     alerta = f'<div style="background:#e8f5e9;border-left:4px solid #388E3C;padding:12px 16px;margin:16px 24px;border-radius:4px">{msg}</div>' if msg else ""
@@ -172,7 +237,7 @@ def admin_doctors(db: Session = Depends(get_db), _=Depends(check_key), msg: str 
     .form-group {{ flex:1; min-width:180px; }}
     label {{ display:block; font-size:12px; color:#555; margin-bottom:4px; font-weight:bold; }}
     input, select {{ width:100%; box-sizing:border-box; padding:8px 10px; border:1px solid #ddd; border-radius:4px; font-size:14px; }}
-    input:focus, select:focus {{ outline:none; border-color:#1a3a5c; }}
+    input:focus {{ outline:none; border-color:#1a3a5c; }}
     .btn {{ background:#1a3a5c; color:#fff; border:none; padding:10px 24px; border-radius:4px; cursor:pointer; font-size:14px; }}
     .btn:hover {{ background:#2ecc71; }}
     table {{ width:100%; border-collapse:collapse; }}
@@ -187,6 +252,7 @@ def admin_doctors(db: Session = Depends(get_db), _=Depends(check_key), msg: str 
     <nav class="nav">
       <a href="/admin/doctors">Médicos</a>
       <a href="/admin/leads">Solicitudes</a>
+      <a href="/admin/logout" style="opacity:.6">Salir</a>
     </nav>
   </div>
 
@@ -249,7 +315,7 @@ def admin_doctors(db: Session = Depends(get_db), _=Depends(check_key), msg: str 
 @router.post("/doctors/crear")
 def crear_doctor(
     db: Session = Depends(get_db),
-    _=Depends(check_key),
+    _=Depends(check_session),
     nombre: str = Form(...),
     especialidad: str = Form(...),
     email: str = Form(...),
@@ -272,14 +338,14 @@ def crear_doctor(
     )
     db.add(doctor)
     db.commit()
-    return RedirectResponse(url=f"/admin/doctors&msg=Médico+{nombre}+creado+exitosamente", status_code=303)
+    return RedirectResponse(url=f"/admin/doctors?msg=Médico+{nombre}+creado+exitosamente", status_code=303)
 
 
 @router.get("/doctors/toggle/{doctor_id}")
-def toggle_doctor(doctor_id: int, db: Session = Depends(get_db), _=Depends(check_key)):
+def toggle_doctor(doctor_id: int, db: Session = Depends(get_db), _=Depends(check_session)):
     doctor = db.query(Doctor).filter(Doctor.id == doctor_id).first()
     if not doctor:
         raise HTTPException(status_code=404, detail="No encontrado")
     doctor.activo = not doctor.activo
     db.commit()
-    return RedirectResponse(url=f"/admin/doctors")
+    return RedirectResponse(url="/admin/doctors", status_code=303)
