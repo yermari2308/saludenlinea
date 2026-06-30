@@ -44,13 +44,18 @@ def submit_lead(data: DoctorLeadCreate, db: Session = Depends(get_db)):
     return {"mensaje": "¡Gracias! Nos pondremos en contacto contigo pronto."}
 
 
+def require_doctor(current=Depends(get_current_user)):
+    if current.get("role") != "doctor":
+        raise HTTPException(status_code=403, detail="Solo accesible para médicos")
+    return current
+
+
 @router.get("", response_model=List[DoctorLeadOut])
 def list_leads(
     estado: str = None,
     db: Session = Depends(get_db),
-    current=Depends(get_current_user),
+    current=Depends(require_doctor),
 ):
-    """Lista de solicitudes de médicos — accesible con cualquier token válido."""
     q = db.query(DoctorLead).order_by(DoctorLead.creado_en.desc())
     if estado:
         q = q.filter(DoctorLead.estado == estado)
@@ -58,8 +63,7 @@ def list_leads(
 
 
 @router.get("/resumen")
-def resumen_leads(db: Session = Depends(get_db), current=Depends(get_current_user)):
-    """Resumen rápido de solicitudes por estado."""
+def resumen_leads(db: Session = Depends(get_db), current=Depends(require_doctor)):
     from sqlalchemy import func
     rows = db.query(DoctorLead.estado, func.count(DoctorLead.id)).group_by(DoctorLead.estado).all()
     return {estado: total for estado, total in rows}
@@ -70,7 +74,7 @@ def update_lead_estado(
     lead_id: int,
     estado: str,
     db: Session = Depends(get_db),
-    current=Depends(get_current_user),
+    current=Depends(require_doctor),
 ):
     lead = db.query(DoctorLead).filter(DoctorLead.id == lead_id).first()
     if not lead:

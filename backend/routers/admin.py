@@ -3,6 +3,7 @@ Panel admin — login con formulario HTML + cookie de sesión segura.
 Accesible en /admin/login (para iniciar sesión) y luego /admin/doctors, /admin/leads.
 """
 import os
+import html as html_lib
 import secrets as secrets_lib
 import bcrypt
 from fastapi import APIRouter, Depends, Cookie, Form, HTTPException, Request
@@ -107,16 +108,22 @@ def admin_leads(db: Session = Depends(get_db), _=Depends(check_session)):
     filas = ""
     for l in leads:
         color = colores.get(l.estado, "#999")
+        nombre = html_lib.escape(l.nombre)
+        especialidad = html_lib.escape(l.especialidad)
+        email = html_lib.escape(l.email)
+        telefono = html_lib.escape(l.telefono)
+        pais = html_lib.escape(l.pais)
+        tel_clean = l.telefono.replace('+','').replace(' ','').replace('-','')
         filas += f"""
         <tr>
           <td>{l.id}</td>
-          <td><b>{l.nombre}</b></td>
-          <td>{l.especialidad}</td>
-          <td><a href="mailto:{l.email}">{l.email}</a></td>
-          <td><a href="https://wa.me/{l.telefono.replace('+','').replace(' ','').replace('-','')}">{l.telefono}</a></td>
-          <td>{l.pais}</td>
+          <td><b>{nombre}</b></td>
+          <td>{especialidad}</td>
+          <td><a href="mailto:{email}">{email}</a></td>
+          <td><a href="https://wa.me/{html_lib.escape(tel_clean)}">{telefono}</a></td>
+          <td>{pais}</td>
           <td>{l.anos_experiencia} años</td>
-          <td><span style="background:{color};color:#fff;padding:3px 10px;border-radius:12px;font-size:12px">{l.estado.upper()}</span></td>
+          <td><span style="background:{color};color:#fff;padding:3px 10px;border-radius:12px;font-size:12px">{html_lib.escape(l.estado.upper())}</span></td>
           <td style="font-size:12px;color:#666">{str(l.creado_en)[:16]}</td>
           <td>
             <a href="/admin/leads/estado/{l.id}/contactado" style="color:#1976D2">✓ Contactado</a> |
@@ -204,12 +211,15 @@ def admin_doctors(db: Session = Depends(get_db), _=Depends(check_session), msg: 
     for d in doctors:
         estado_color = "#388E3C" if d.activo else "#D32F2F"
         estado_txt = "Activo" if d.activo else "Inactivo"
+        nombre = html_lib.escape(d.nombre)
+        especialidad = html_lib.escape(d.especialidad)
+        email = html_lib.escape(d.email)
         filas += f"""
         <tr>
           <td>{d.id}</td>
-          <td><b>{d.nombre}</b></td>
-          <td>{d.especialidad}</td>
-          <td>{d.email}</td>
+          <td><b>{nombre}</b></td>
+          <td>{especialidad}</td>
+          <td>{email}</td>
           <td>₡{d.tarifa:.0f}</td>
           <td>⭐ {d.calificacion:.1f}</td>
           <td><span style="background:{estado_color};color:#fff;padding:3px 10px;border-radius:12px;font-size:12px">{estado_txt}</span></td>

@@ -30,10 +30,15 @@ Base.metadata.create_all(bind=engine)
 
 limiter = Limiter(key_func=get_remote_address)
 
+ENV = os.getenv("ENV", "production")
+
 app = FastAPI(
     title="SaludEnLínea API",
     description="Backend de telemedicina para Latinoamérica",
     version="1.0.0",
+    docs_url="/docs" if ENV != "production" else None,
+    redoc_url="/redoc" if ENV != "production" else None,
+    openapi_url="/openapi.json" if ENV != "production" else None,
 )
 
 app.state.limiter = limiter
@@ -46,6 +51,24 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: https:; "
+        "frame-ancestors 'none'"
+    )
+    return response
+
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):

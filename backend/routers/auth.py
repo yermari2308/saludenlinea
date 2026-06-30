@@ -53,26 +53,12 @@ def register_patient(request: Request, data: PatientCreate, db: Session = Depend
     return TokenResponse(access_token=token, role="patient", user_id=patient.id, nombre=patient.nombre)
 
 
-@router.post("/register/doctor", response_model=TokenResponse, status_code=201)
-@limiter.limit("10/minute")
-def register_doctor(request: Request, data: DoctorCreate, db: Session = Depends(get_db)):
-    if db.query(Doctor).filter(Doctor.email == data.email).first():
-        logger.warning("Registro médico fallido — email duplicado: %s ip=%s", data.email, get_remote_address(request))
-        raise HTTPException(status_code=400, detail="Email ya registrado")
-    doctor = Doctor(
-        nombre=data.nombre,
-        email=data.email,
-        especialidad=data.especialidad,
-        credenciales=data.credenciales or "",
-        tarifa=data.tarifa or 15.0,
-        pass_hash=hash_password(data.password),
+@router.post("/register/doctor", status_code=410)
+def register_doctor_disabled():
+    raise HTTPException(
+        status_code=410,
+        detail="El registro público de médicos está deshabilitado. Contacta al administrador."
     )
-    db.add(doctor)
-    db.commit()
-    db.refresh(doctor)
-    logger.info("Registro médico exitoso id=%s email=%s ip=%s", doctor.id, doctor.email, get_remote_address(request))
-    token = create_token({"sub": str(doctor.id), "role": "doctor", "email": doctor.email})
-    return TokenResponse(access_token=token, role="doctor", user_id=doctor.id, nombre=doctor.nombre)
 
 
 @router.post("/login", response_model=TokenResponse)
