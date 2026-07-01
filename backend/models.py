@@ -122,6 +122,25 @@ class ConsultSession(Base):
     cita = relationship("Appointment", back_populates="sesion")
 
 
+class MedicalRecord(Base):
+    """Expediente clínico completo del paciente — una fila por paciente."""
+    __tablename__ = "medical_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    paciente_id = Column(Integer, ForeignKey("patients.id"), unique=True, nullable=False)
+    # Secciones como JSON en Text (compatible con SQLite dev y PostgreSQL prod)
+    datos_personales = Column(Text, default="{}")   # tipo_sangre, estado_civil, ocupacion, contacto_emergencia
+    somatometria = Column(Text, default="{}")        # peso, altura, imc, presion_arterial, frecuencia_cardiaca
+    patologicos = Column(Text, default="{}")         # enfermedades_cronicas[], cirugias[], alergias[], medicamentos_actuales[]
+    no_patologicos = Column(Text, default="{}")      # tabaquismo, alcohol, ejercicio, alimentacion
+    vacunacion = Column(Text, default="[]")          # [{nombre, fecha}]
+    salud_femenina = Column(Text, nullable=True)     # fecha_ultima_menstruacion, embarazos, metodo_anticonceptivo
+    completitud_pct = Column(Integer, default=0)
+    actualizado_en = Column(DateTime, default=datetime.utcnow)
+
+    paciente = relationship("Patient", foreign_keys=[paciente_id])
+
+
 class ConsultQueue(Base):
     """Cola de consultas urgentes (Botón Rojo)."""
     __tablename__ = "consult_queue"

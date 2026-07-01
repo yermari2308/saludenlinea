@@ -3,6 +3,7 @@ import '../app_theme.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
 import 'login_screen.dart';
+import 'medical_record_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -14,6 +15,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   Patient? _patient;
   bool _loading = true;
+  int _expedientePct = 0;
 
   @override
   void initState() {
@@ -24,7 +26,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _load() async {
     try {
       final p = await ApiService.getMyProfile();
-      setState(() => _patient = p);
+      if (mounted) setState(() => _patient = p);
+      // Cargar % expediente en paralelo, sin bloquear
+      ApiService.getMedicalRecord().then((rec) {
+        if (mounted) setState(() => _expedientePct = rec['completitud_pct'] as int? ?? 0);
+      }).catchError((_) {});
     } catch (_) {
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -169,6 +175,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: Icons.email_rounded,
             label: 'Correo electrónico',
             value: _patient!.email,
+          ),
+          const SizedBox(height: 20),
+          // ── Banner Expediente Clínico ──────────────────────────────────
+          _ExpedienteBanner(
+            pct: _expedientePct,
+            onTap: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MedicalRecordScreen()),
+              );
+              _load();
+            },
           ),
           const SizedBox(height: 20),
           _SectionLabel(label: 'Historial médico'),
@@ -343,6 +361,91 @@ class _InfoTile extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Banner Expediente Clínico ─────────────────────────────────────────────────
+
+class _ExpedienteBanner extends StatelessWidget {
+  final int pct;
+  final VoidCallback onTap;
+
+  const _ExpedienteBanner({required this.pct, required this.onTap});
+
+  Color get _barColor {
+    if (pct >= 80) return AppColors.accentDark;
+    if (pct >= 40) return const Color(0xFFF59E0B);
+    return AppColors.primaryLight;
+  }
+
+  String get _mensaje {
+    if (pct == 0) return 'Completa tu expediente para mejores diagnósticos';
+    if (pct < 40) return 'Agrega más datos para diagnósticos más precisos';
+    if (pct < 80) return 'Vas bien — continúa completando tu expediente';
+    return 'Expediente casi completo';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border(left: BorderSide(color: _barColor, width: 3)),
+          boxShadow: [AppTheme.cardShadow],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: _barColor.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.folder_shared_rounded, color: _barColor, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Expediente clínico',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: pct / 100,
+                      minHeight: 5,
+                      backgroundColor: AppColors.cardBorder,
+                      valueColor: AlwaysStoppedAnimation<Color>(_barColor),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '$pct% — $_mensaje',
+                    style: const TextStyle(
+                        fontSize: 11, color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(Icons.arrow_forward_ios_rounded,
+                size: 14, color: AppColors.textHint),
+          ],
+        ),
       ),
     );
   }

@@ -322,6 +322,36 @@ class ApiService {
     return data['disponible_urgente'] as bool;
   }
 
+  // ── Expediente Clínico ────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getMedicalRecord() async {
+    final res = await DohClient.get(
+      '$baseUrl/api/medical-record/me',
+      headers: await _headers(),
+    );
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> updateMedicalSection({
+    required String seccion,
+    required dynamic datos,
+  }) async {
+    final res = await DohClient.put(
+      '$baseUrl/api/medical-record/me',
+      headers: await _headers(),
+      body: jsonEncode({'seccion': seccion, 'datos': datos}),
+    );
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> getPatientMedicalRecord(int pacienteId) async {
+    final res = await DohClient.get(
+      '$baseUrl/api/medical-record/patient/$pacienteId',
+      headers: await _headers(),
+    );
+    return _parse(res);
+  }
+
   // ── Patient ───────────────────────────────────────────────────────────────
 
   static Future<Patient> getMyProfile() async {
