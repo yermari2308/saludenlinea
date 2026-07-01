@@ -258,6 +258,70 @@ class ApiService {
     return _parse(res);
   }
 
+  // ── Urgent Queue (Botón Rojo) ─────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> joinUrgentQueue({
+    String especialidad = 'medicina_general',
+  }) async {
+    final res = await DohClient.post(
+      '$baseUrl/api/urgent/join',
+      headers: await _headers(),
+      body: jsonEncode({'especialidad': especialidad}),
+    );
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> getUrgentStatus() async {
+    final res = await DohClient.get(
+      '$baseUrl/api/urgent/status',
+      headers: await _headers(),
+    );
+    return _parse(res);
+  }
+
+  static Future<void> cancelUrgentQueue() async {
+    final res = await DohClient.post(
+      '$baseUrl/api/urgent/cancel',
+      headers: await _headers(),
+    );
+    _parse(res);
+  }
+
+  static Future<List<Map<String, dynamic>>> getUrgentQueue() async {
+    final res = await DohClient.get(
+      '$baseUrl/api/urgent/queue',
+      headers: await _headers(),
+    );
+    final data = _parse(res) as List;
+    return data.cast<Map<String, dynamic>>();
+  }
+
+  static Future<Map<String, dynamic>> takeUrgentPatient(int queueId) async {
+    final res = await DohClient.post(
+      '$baseUrl/api/urgent/take/$queueId',
+      headers: await _headers(),
+    );
+    return _parse(res);
+  }
+
+  static Future<void> toggleDisponibleUrgente(bool disponible) async {
+    final res = await DohClient.post(
+      '$baseUrl/api/urgent/toggle-disponible',
+      headers: await _headers(),
+      body: jsonEncode({'disponible': disponible}),
+    );
+    _parse(res);
+  }
+
+  static Future<bool> getDisponibleUrgente() async {
+    final res = await DohClient.get(
+      '$baseUrl/api/urgent/my-status',
+      headers: await _headers(),
+    );
+    final data = _parse(res);
+    return data['disponible_urgente'] as bool;
+  }
+
   // ── Patient ───────────────────────────────────────────────────────────────
 
   static Future<Patient> getMyProfile() async {

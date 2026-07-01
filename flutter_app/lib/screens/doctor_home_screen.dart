@@ -9,6 +9,7 @@ import '../models/models.dart';
 import 'consultation_screen.dart';
 import 'chat_screen.dart';
 import 'login_screen.dart';
+import 'waiting_room_screen.dart';
 
 class DoctorHomeScreen extends StatefulWidget {
   const DoctorHomeScreen({super.key});
@@ -20,11 +21,15 @@ class DoctorHomeScreen extends StatefulWidget {
 class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   late Future<List<Appointment>> _citasFuture;
   String _nombreDoctor = '';
+  bool _disponibleUrgente = false;
+  List<Map<String, dynamic>> _cola = [];
+  bool _loadingCola = false;
 
   @override
   void initState() {
     super.initState();
     _cargarDatos();
+    _cargarUrgente();
   }
 
   void _cargarDatos() {
@@ -32,6 +37,90 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     ApiService.getUserInfo().then((info) {
       if (mounted) setState(() => _nombreDoctor = info['nombre'] ?? 'Doctor');
     });
+  }
+
+  Future<void> _cargarUrgente() async {
+    try {
+      final disponible = await ApiService.getDisponibleUrgente();
+      final cola = await ApiService.getUrgentQueue();
+      if (mounted) {
+        setState(() {
+          _disponibleUrgente = disponible;
+          _cola = cola;
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _toggleDisponible(bool valor) async {
+    try {
+      await ApiService.toggleDisponibleUrgente(valor);
+      setState(() => _disponibleUrgente = valor);
+      await _cargarUrgente();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(e.toString()),
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ));
+    }
+  }
+
+  Future<void> _atenderPaciente(int queueId, String nombre) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Atender paciente urgente',
+            style: TextStyle(fontWeight: FontWeight.w700)),
+        content: Text(
+            '¿Atender a $nombre ahora? Se creará la cita y la sala Jitsi automáticamente.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar',
+                style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE53E3E),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Atender'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    setState(() => _loadingCola = true);
+    try {
+      final result = await ApiService.takeUrgentPatient(queueId);
+      setState(() => _loadingCola = false);
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) =>
+              ConsultationScreen(appointmentId: result['appointment_id'] as int),
+        ),
+      );
+      _cargarDatos();
+      _cargarUrgente();
+    } catch (e) {
+      setState(() => _loadingCola = false);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(e.toString()),
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ));
+    }
   }
 
   Future<void> _finalizar(int citaId) async {
@@ -249,6 +338,15 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
 
     return SliverList(
       delegate: SliverChildListDelegate([
+        // ── Panel Urgencias ───────────────────────────────────────────────
+        _UrgentPanel(
+          disponible: _disponibleUrgente,
+          cola: _cola,
+          loading: _loadingCola,
+          onToggle: _toggleDisponible,
+          onRefreshCola: _cargarUrgente,
+          onAtender: _atenderPaciente,
+        ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
           child: Row(
@@ -601,6 +699,226 @@ class _EntrarBtn extends StatelessWidget {
         child: const Text('Entrar',
             style: TextStyle(
                 color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
+      ),
+    );
+  }
+}
+
+// ── Panel de urgencias para médico ───────────────────────────────────────────
+
+class _UrgentPanel extends StatelessWidget {
+  final bool disponible;
+  final List<Map<String, dynamic>> cola;
+  final bool loading;
+  final ValueChanged<bool> onToggle;
+  final VoidCallback onRefreshCola;
+  final Future<void> Function(int queueId, String nombre) onAtender;
+
+  const _UrgentPanel({
+    required this.disponible,
+    required this.cola,
+    required this.loading,
+    required this.onToggle,
+    required this.onRefreshCola,
+    required this.onAtender,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: disponible
+              ? const Color(0xFFE53E3E).withOpacity(0.3)
+              : AppColors.cardBorder,
+        ),
+        boxShadow: [AppTheme.cardShadow],
+      ),
+      child: Column(
+        children: [
+          // Header toggle
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: disponible
+                        ? const Color(0xFFE53E3E).withOpacity(0.1)
+                        : AppColors.textHint.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.medical_services_rounded,
+                    color: disponible
+                        ? const Color(0xFFE53E3E)
+                        : AppColors.textHint,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Consultas Urgentes',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        disponible
+                            ? 'Estás disponible • ${cola.length} en espera'
+                            : 'No disponible',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: disponible
+                              ? const Color(0xFFE53E3E)
+                              : AppColors.textHint,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch(
+                  value: disponible,
+                  onChanged: onToggle,
+                  activeColor: const Color(0xFFE53E3E),
+                ),
+              ],
+            ),
+          ),
+          // Cola (solo si disponible y hay pacientes)
+          if (disponible && cola.isNotEmpty) ...[
+            const Divider(height: 1, color: AppColors.cardBorder),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: Row(
+                children: [
+                  const Text(
+                    'Cola de espera',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: onRefreshCola,
+                    child: const Icon(Icons.refresh_rounded,
+                        size: 16, color: AppColors.textHint),
+                  ),
+                ],
+              ),
+            ),
+            ...cola.map((item) => _QueueItem(
+                  nombre: item['paciente_nombre'] as String,
+                  especialidad: item['especialidad'] as String,
+                  esperaMin: item['espera_min'] as int,
+                  loading: loading,
+                  onAtender: () => onAtender(
+                    item['queue_id'] as int,
+                    item['paciente_nombre'] as String,
+                  ),
+                )),
+            const SizedBox(height: 8),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _QueueItem extends StatelessWidget {
+  final String nombre;
+  final String especialidad;
+  final int esperaMin;
+  final bool loading;
+  final VoidCallback onAtender;
+
+  const _QueueItem({
+    required this.nombre,
+    required this.especialidad,
+    required this.esperaMin,
+    required this.loading,
+    required this.onAtender,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE53E3E).withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.person_rounded,
+                color: Color(0xFFE53E3E), size: 18),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(nombre,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: AppColors.textPrimary,
+                    )),
+                Text('$especialidad • $esperaMin min en espera',
+                    style: const TextStyle(
+                        fontSize: 11, color: AppColors.textSecondary)),
+              ],
+            ),
+          ),
+          loading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Color(0xFFE53E3E),
+                  ),
+                )
+              : GestureDetector(
+                  onTap: onAtender,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE53E3E),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'Atender',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+        ],
       ),
     );
   }

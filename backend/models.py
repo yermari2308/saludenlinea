@@ -4,6 +4,8 @@ from sqlalchemy.orm import relationship
 from database import Base
 
 
+
+
 class Patient(Base):
     __tablename__ = "patients"
 
@@ -35,9 +37,11 @@ class Doctor(Base):
     pass_hash = Column(String(255), nullable=False)
     activo = Column(Boolean, default=True)
     calificacion = Column(Float, default=5.0)
+    disponible_urgente = Column(Boolean, default=False)
     creado_en = Column(DateTime, default=datetime.utcnow)
 
     citas = relationship("Appointment", back_populates="doctor")
+    cola_items = relationship("ConsultQueue", back_populates="doctor", foreign_keys="ConsultQueue.doctor_id")
 
 
 class Appointment(Base):
@@ -116,6 +120,24 @@ class ConsultSession(Base):
     detalle_calidad = Column(String(50), default="")
 
     cita = relationship("Appointment", back_populates="sesion")
+
+
+class ConsultQueue(Base):
+    """Cola de consultas urgentes (Botón Rojo)."""
+    __tablename__ = "consult_queue"
+
+    id = Column(Integer, primary_key=True, index=True)
+    paciente_id = Column(Integer, ForeignKey("patients.id"), nullable=False)
+    especialidad = Column(String(100), default="medicina_general")
+    estado = Column(String(20), default="esperando")  # esperando|asignada|en_curso|finalizada|cancelada
+    doctor_id = Column(Integer, ForeignKey("doctors.id"), nullable=True)
+    prioridad = Column(Integer, default=0)
+    sala_token = Column(String(255), nullable=True)
+    creado_en = Column(DateTime, default=datetime.utcnow)
+    asignada_en = Column(DateTime, nullable=True)
+
+    paciente = relationship("Patient", foreign_keys=[paciente_id])
+    doctor = relationship("Doctor", back_populates="cola_items", foreign_keys=[doctor_id])
 
 
 class PasswordResetToken(Base):
