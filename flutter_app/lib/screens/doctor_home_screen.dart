@@ -505,7 +505,7 @@ class _CitaCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                StatusChip(estado: cita.estado),
+                StatusChip(label: cita.estado, color: _color),
                 if (onEntrar != null) ...[
                   const SizedBox(width: 8),
                   _EntrarBtn(onTap: onEntrar!),
