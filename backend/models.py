@@ -122,6 +122,25 @@ class ConsultSession(Base):
     cita = relationship("Appointment", back_populates="sesion")
 
 
+class HealthAssessment(Base):
+    """HRA — Evaluación general de salud del paciente."""
+    __tablename__ = "health_assessments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    paciente_id = Column(Integer, ForeignKey("patients.id"), nullable=False)
+    peso_score = Column(Integer, default=0)        # 0=rojo 1=amarillo 2=verde
+    sueno_score = Column(Integer, default=0)
+    tabaco_score = Column(Integer, default=0)
+    alcohol_score = Column(Integer, default=0)
+    ejercicio_score = Column(Integer, default=0)
+    saturacion_score = Column(Integer, default=0)
+    puntaje_total = Column(Integer, default=0)     # suma de scores (0-12)
+    recomendaciones = Column(Text, default="[]")   # JSON lista de {parametro, color, texto, icono}
+    creado_en = Column(DateTime, default=datetime.utcnow)
+
+    paciente = relationship("Patient", foreign_keys=[paciente_id])
+
+
 class MedicalRecord(Base):
     """Expediente clínico completo del paciente — una fila por paciente."""
     __tablename__ = "medical_records"

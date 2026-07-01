@@ -10,7 +10,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from database import engine
 from models import Base
-from routers import auth, doctors, appointments, patients, leads, admin, payments, google_auth, chat, password_reset, urgent, medical_record
+from routers import auth, doctors, appointments, patients, leads, admin, payments, google_auth, chat, password_reset, urgent, medical_record, hra
 
 load_dotenv()
 
@@ -116,6 +116,7 @@ app.include_router(chat.router)
 app.include_router(password_reset.router)
 app.include_router(urgent.router)
 app.include_router(medical_record.router)
+app.include_router(hra.router)
 
 
 @app.get("/api")

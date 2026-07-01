@@ -322,6 +322,42 @@ class ApiService {
     return data['disponible_urgente'] as bool;
   }
 
+  // ── HRA — Evaluación de salud ─────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> submitHra({
+    double? pesoKg,
+    double? alturaM,
+    double? suenoHoras,
+    String? tabaco,
+    String? alcohol,
+    String? ejercicio,
+    double? saturacionPct,
+  }) async {
+    final res = await DohClient.post(
+      '$baseUrl/api/hra',
+      headers: await _headers(),
+      body: jsonEncode({
+        if (pesoKg != null) 'peso_kg': pesoKg,
+        if (alturaM != null) 'altura_m': alturaM,
+        if (suenoHoras != null) 'sueno_horas': suenoHoras,
+        if (tabaco != null) 'tabaco': tabaco,
+        if (alcohol != null) 'alcohol': alcohol,
+        if (ejercicio != null) 'ejercicio': ejercicio,
+        if (saturacionPct != null) 'saturacion_pct': saturacionPct,
+      }),
+    );
+    return _parse(res);
+  }
+
+  static Future<List<Map<String, dynamic>>> getHraHistory() async {
+    final res = await DohClient.get(
+      '$baseUrl/api/hra/history',
+      headers: await _headers(),
+    );
+    final data = _parse(res) as List;
+    return data.cast<Map<String, dynamic>>();
+  }
+
   // ── Expediente Clínico ────────────────────────────────────────────────────
 
   static Future<Map<String, dynamic>> getMedicalRecord() async {
