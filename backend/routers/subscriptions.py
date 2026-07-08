@@ -117,6 +117,84 @@ def mi_suscripcion(
     }
 
 
+# ── ONVO Pay (tarjetas — Costa Rica) ─────────────────────────────────────────
+
+ONVO_SECRET_KEY = os.getenv("ONVO_SECRET_KEY", "")
+
+
+@router.post("/subscribe/onvo")
+def suscribir_onvo(
+    data: SubscribeRequest,
+    db: Session = Depends(get_db),
+    current=Depends(require_patient),
+):
+    """Crea un link de pago ONVO para activar una suscripción mensual."""
+    if not ONVO_SECRET_KEY:
+        raise HTTPException(status_code=503, detail="Pagos con tarjeta no configurados aún")
+
+    plan_info = PLANES.get(data.plan)
+    if not plan_info:
+        raise HTTPException(status_code=400, detail="Plan no válido")
+
+    paciente_id = int(current["sub"])
+    from routers.payments import _onvo_post  # reutilizar cliente ONVO
+
+    session = _onvo_post("/checkout/sessions/one-time-link", {
+        "lineItems": [{
+            "quantity": 1,
+            "unitAmount": int(round(plan_info["monto_usd"] * 100)),
+            "currency": "USD",
+            "description": f"{plan_info['nombre']} — {plan_info['descripcion']} (1 mes)",
+        }],
+        "customerEmail": current["email"],
+        "redirectUrl": f"{BASE_URL}/api/subscriptions/onvo/success?paciente_id={paciente_id}&plan={data.plan}",
+        "cancelUrl": f"{BASE_URL}/api/subscriptions/stripe/cancel",
+        "metadata": {"paciente_id": str(paciente_id), "plan": data.plan},
+    })
+
+    # Registrar intento pendiente con el id de sesión para verificar al volver
+    pendiente = Subscription(
+        paciente_id=paciente_id,
+        plan=data.plan,
+        estado="pendiente_pago",
+        consultas_incluidas=plan_info["consultas"],
+        consultas_usadas=0,
+        inicio=datetime.utcnow(),
+        fin=datetime.utcnow(),  # se fija al activar
+        monto=plan_info["monto_usd"],
+        moneda="USD",
+        stripe_subscription_id=session.get("id", ""),
+    )
+    db.add(pendiente)
+    db.commit()
+
+    return {"checkout_url": session.get("url"), "session_id": session.get("id")}
+
+
+@router.get("/onvo/success")
+def onvo_sub_success(paciente_id: int, plan: str, db: Session = Depends(get_db)):
+    """ONVO redirige aquí tras pagar la suscripción. Verificación server-side."""
+    pendiente = db.query(Subscription).filter(
+        Subscription.paciente_id == paciente_id,
+        Subscription.plan == plan,
+        Subscription.estado == "pendiente_pago",
+    ).order_by(Subscription.creado_en.desc()).first()
+
+    if not pendiente or not pendiente.stripe_subscription_id:
+        return {"mensaje": "No se encontró el intento de pago", "exito": False}
+
+    if ONVO_SECRET_KEY:
+        from routers.payments import _onvo_get
+        session = _onvo_get(f"/checkout/sessions/{pendiente.stripe_subscription_id}")
+        if session.get("status") == "complete":
+            pendiente.estado = "cancelado"  # cerrar el intento; _activar_plan crea/renueva el activo
+            db.commit()
+            _activar_plan(paciente_id, plan, db)
+            return {"mensaje": "¡Plan activado! Ya puedes agendar consultas. Volvé a la app.", "exito": True}
+
+    return {"mensaje": "El pago aún no se confirma. Si ya pagaste, tu plan se activará en unos minutos.", "exito": False}
+
+
 @router.post("/subscribe/stripe")
 def suscribir_stripe(
     data: SubscribeRequest,

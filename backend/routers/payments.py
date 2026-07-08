@@ -327,6 +327,97 @@ def admin_ver_comprobante(
     return {"comprobante_b64": pago.comprobante_b64}
 
 
+# ── ONVO Pay (tarjetas — pasarela de Costa Rica) ──────────────────────────────
+
+ONVO_SECRET_KEY = os.getenv("ONVO_SECRET_KEY", "")
+ONVO_API = "https://api.onvopay.com/v1"
+
+
+def _onvo_post(path: str, payload: dict) -> dict:
+    import requests as _rq
+    r = _rq.post(
+        f"{ONVO_API}{path}",
+        json=payload,
+        headers={"Authorization": f"Bearer {ONVO_SECRET_KEY}"},
+        timeout=20,
+    )
+    if r.status_code not in (200, 201):
+        logger.warning("ONVO error %s: %s", r.status_code, r.text[:300])
+        raise HTTPException(status_code=502, detail="Error creando el pago con ONVO")
+    return r.json()
+
+
+def _onvo_get(path: str) -> dict:
+    import requests as _rq
+    r = _rq.get(
+        f"{ONVO_API}{path}",
+        headers={"Authorization": f"Bearer {ONVO_SECRET_KEY}"},
+        timeout=20,
+    )
+    if r.status_code != 200:
+        raise HTTPException(status_code=502, detail="Error consultando el pago con ONVO")
+    return r.json()
+
+
+class OnvoCheckoutRequest(BaseModel):
+    appointment_id: int
+
+
+@router.post("/onvo/checkout")
+def onvo_checkout(
+    data: OnvoCheckoutRequest,
+    db: Session = Depends(get_db),
+    current=Depends(require_patient),
+):
+    """Crea un link de pago ONVO (tarjeta) para una cita."""
+    if not ONVO_SECRET_KEY:
+        raise HTTPException(status_code=503, detail="Pagos con tarjeta no configurados aún")
+
+    cita = _get_cita_owned(data.appointment_id, int(current["sub"]), db)
+    doctor = db.query(Doctor).filter(Doctor.id == cita.doctor_id).first()
+
+    session = _onvo_post("/checkout/sessions/one-time-link", {
+        "lineItems": [{
+            "quantity": 1,
+            "unitAmount": int(round(float(doctor.tarifa) * 100)),  # centavos
+            "currency": "USD",
+            "description": f"Consulta con {doctor.nombre} — {doctor.especialidad}",
+        }],
+        "customerEmail": current["email"],
+        "redirectUrl": f"{BASE_URL}/api/payments/onvo/success?cita_id={cita.id}",
+        "cancelUrl": f"{BASE_URL}/api/payments/resultado/failure",
+        "metadata": {"cita_id": str(cita.id)},
+    })
+
+    pago = _get_or_create_pago(cita, doctor.tarifa, "onvo", db)
+    pago.referencia_externa = session.get("id", "")
+    db.commit()
+
+    return {"checkout_url": session.get("url"), "session_id": session.get("id")}
+
+
+@router.get("/onvo/success")
+def onvo_success(cita_id: int, db: Session = Depends(get_db)):
+    """ONVO redirige aquí tras el pago. Verificamos el estado real contra su API."""
+    pago = db.query(Payment).filter(
+        Payment.cita_id == cita_id, Payment.metodo == "onvo",
+    ).first()
+    if not pago or not pago.referencia_externa:
+        return {"resultado": "failure", "mensaje": "Pago no encontrado"}
+
+    if pago.estado != "exitoso" and ONVO_SECRET_KEY:
+        session = _onvo_get(f"/checkout/sessions/{pago.referencia_externa}")
+        if session.get("status") == "complete":
+            pago.estado = "exitoso"
+            pago.verificado_en = datetime.utcnow()
+            db.commit()
+            logger.info("ONVO pago exitoso cita_id=%s session=%s", cita_id, pago.referencia_externa)
+
+    if pago.estado == "exitoso":
+        return {"resultado": "success", "mensaje": "¡Pago exitoso! Tu cita ha sido confirmada. Ya puedes volver a la app."}
+    return {"resultado": "pending", "mensaje": "El pago aún no se confirma. Si ya pagaste, se reflejará en unos minutos."}
+
+
 # ── Stripe ────────────────────────────────────────────────────────────────────
 
 @router.post("/stripe/checkout")

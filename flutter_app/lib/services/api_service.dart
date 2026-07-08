@@ -302,6 +302,15 @@ class ApiService {
     return _parse(res);
   }
 
+  static Future<Map<String, dynamic>> onvoCheckout(int appointmentId) async {
+    final res = await DohClient.post(
+      '$baseUrl/api/payments/onvo/checkout',
+      headers: await _headers(),
+      body: jsonEncode({'appointment_id': appointmentId}),
+    );
+    return _parse(res);
+  }
+
   // ── Suscripciones ─────────────────────────────────────────────────────────
 
   static Future<List<Map<String, dynamic>>> getPlanes() async {
@@ -321,11 +330,11 @@ class ApiService {
     return _parse(res);
   }
 
-  static Future<Map<String, dynamic>> subscribirStripe(String plan) async {
+  static Future<Map<String, dynamic>> subscribirOnvo(String plan) async {
     final res = await DohClient.post(
-      '$baseUrl/api/subscriptions/subscribe/stripe',
+      '$baseUrl/api/subscriptions/subscribe/onvo',
       headers: await _headers(),
-      body: jsonEncode({'plan': plan, 'metodo': 'stripe'}),
+      body: jsonEncode({'plan': plan, 'metodo': 'onvo'}),
     );
     return _parse(res);
   }

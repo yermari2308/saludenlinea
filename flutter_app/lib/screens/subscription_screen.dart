@@ -44,7 +44,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   Future<void> _suscribir(String planId) async {
     setState(() => _subscribing = true);
     try {
-      final data = await ApiService.subscribirStripe(planId);
+      final data = await ApiService.subscribirOnvo(planId);
       final url = data['checkout_url'] as String?;
       if (url != null && await canLaunchUrl(Uri.parse(url))) {
         await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);

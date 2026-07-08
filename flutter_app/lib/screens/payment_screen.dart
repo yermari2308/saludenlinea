@@ -22,7 +22,7 @@ class PaymentScreen extends StatefulWidget {
   State<PaymentScreen> createState() => _PaymentScreenState();
 }
 
-enum _MetodoPago { sinpe, stripe, mercadopago }
+enum _MetodoPago { sinpe, tarjeta }
 
 class _PaymentScreenState extends State<PaymentScreen> {
   _MetodoPago _metodo = _MetodoPago.sinpe;
@@ -99,33 +99,15 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
   }
 
-  Future<void> _pagarStripe() async {
+  Future<void> _pagarTarjeta() async {
     setState(() => _loading = true);
     try {
-      final data = await ApiService.stripeCheckout(widget.appointmentId);
+      final data = await ApiService.onvoCheckout(widget.appointmentId);
       final url = data['checkout_url'] as String?;
       if (url != null && await canLaunchUrl(Uri.parse(url))) {
         await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
       } else {
         _snack('No se pudo abrir la página de pago');
-      }
-    } catch (e) {
-      if (!mounted) return;
-      _snack(e.toString());
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _pagarMercadopago() async {
-    setState(() => _loading = true);
-    try {
-      final data = await ApiService.createPaymentPreference(widget.appointmentId);
-      final url = data['sandbox_init_point'] ?? data['init_point'] as String?;
-      if (url != null && await canLaunchUrl(Uri.parse(url))) {
-        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-      } else {
-        _snack('No se pudo abrir Mercado Pago');
       }
     } catch (e) {
       if (!mounted) return;
@@ -261,21 +243,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
           ),
           const SizedBox(height: 8),
           _MetodoTile(
-            selected: _metodo == _MetodoPago.stripe,
+            selected: _metodo == _MetodoPago.tarjeta,
             icon: Icons.credit_card_rounded,
             titulo: 'Tarjeta de crédito / débito',
-            subtitulo: 'Visa, Mastercard, American Express',
+            subtitulo: 'Visa, Mastercard — procesado por ONVO Pay',
             color: const Color(0xFF6366F1),
-            onTap: () => setState(() => _metodo = _MetodoPago.stripe),
-          ),
-          const SizedBox(height: 8),
-          _MetodoTile(
-            selected: _metodo == _MetodoPago.mercadopago,
-            icon: Icons.account_balance_wallet_rounded,
-            titulo: 'Mercado Pago',
-            subtitulo: 'Tarjeta, efectivo, transferencia',
-            color: const Color(0xFF009EE3),
-            onTap: () => setState(() => _metodo = _MetodoPago.mercadopago),
+            onTap: () => setState(() => _metodo = _MetodoPago.tarjeta),
           ),
           const SizedBox(height: 24),
 
@@ -401,8 +374,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ),
           ],
 
-          // ── Stripe ─────────────────────────────────────────────────────────
-          if (_metodo == _MetodoPago.stripe) ...[
+          // ── Tarjeta (ONVO Pay) ─────────────────────────────────────────────
+          if (_metodo == _MetodoPago.tarjeta) ...[
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
@@ -410,8 +383,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Text(
-                'Serás redirigido a Stripe — plataforma de pagos segura con cifrado SSL. '
-                'Aceptamos Visa, Mastercard y American Express.',
+                'Serás redirigido a ONVO Pay — pasarela de pagos costarricense '
+                'con cifrado SSL. Aceptamos Visa y Mastercard.',
                 style: TextStyle(
                     fontSize: 13, color: Color(0xFF4338CA), height: 1.5),
               ),
@@ -423,43 +396,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 icon: const Icon(Icons.open_in_new_rounded),
                 label: const Text('Pagar con tarjeta',
                     style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-                onPressed: _loading ? null : _pagarStripe,
+                onPressed: _loading ? null : _pagarTarjeta,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF6366F1),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ),
-          ],
-
-          // ── MercadoPago ────────────────────────────────────────────────────
-          if (_metodo == _MetodoPago.mercadopago) ...[
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE0F4FF),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Text(
-                'Serás redirigido a Mercado Pago. '
-                'Puedes pagar con tarjeta, efectivo o saldo de tu cuenta.',
-                style: TextStyle(
-                    fontSize: 13, color: Color(0xFF0369A1), height: 1.5),
-              ),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.open_in_new_rounded),
-                label: const Text('Pagar con Mercado Pago',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-                onPressed: _loading ? null : _pagarMercadopago,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF009EE3),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
