@@ -475,6 +475,11 @@ class ApiService {
   static dynamic _parse(http.Response res) {
     final body = jsonDecode(utf8.decode(res.bodyBytes));
     if (res.statusCode >= 400) {
+      if (res.statusCode == 401) {
+        // Token vencido/inválido → limpiar sesión para que el próximo
+        // arranque lleve directo al login (fire-and-forget)
+        logout();
+      }
       throw ApiException(body['detail'] ?? 'Error desconocido', res.statusCode);
     }
     return body;

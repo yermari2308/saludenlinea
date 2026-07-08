@@ -305,6 +305,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
             const SizedBox(height: 8),
             TextButton(onPressed: _load, child: const Text('Reintentar')),
+            const SizedBox(height: 4),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.logout_rounded, size: 16),
+              label: const Text('Cerrar sesión'),
+              onPressed: () async {
+                await ApiService.logout();
+                if (!mounted) return;
+                Navigator.pushReplacement(context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()));
+              },
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.error,
+                side: BorderSide(color: AppColors.error.withOpacity(0.4)),
+              ),
+            ),
           ],
         ),
       );

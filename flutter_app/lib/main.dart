@@ -52,20 +52,32 @@ class _SplashRouterState extends State<SplashRouter> {
       return;
     }
 
-    // Verificar que el token sea válido antes de entrar
+    // Verificar contra el SERVIDOR que el token siga siendo válido
     try {
-      final res = await ApiService.getUserInfo();
+      if (role == 'doctor') {
+        await ApiService.getDisponibleUrgente(); // requiere token de doctor válido
+        if (!mounted) return;
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const DoctorHomeScreen()));
+      } else {
+        await ApiService.getMyProfile(); // requiere token de paciente válido
+        if (!mounted) return;
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
+      }
+    } on ApiException catch (e) {
+      // Token inválido/expirado (401) u otro rechazo → limpiar sesión y al login
+      if (e.statusCode == 401 || e.statusCode == 403) {
+        await ApiService.logout();
+      }
+      if (!mounted) return;
+      _goLogin();
+    } catch (_) {
+      // Error de red: dejar pasar; las pantallas manejan sus propios errores
       if (!mounted) return;
       if (role == 'doctor') {
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const DoctorHomeScreen()));
       } else {
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
       }
-    } catch (_) {
-      // Token inválido o expirado → limpiar y mandar al login
-      await ApiService.logout();
-      if (!mounted) return;
-      _goLogin();
     }
   }
 
