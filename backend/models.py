@@ -71,12 +71,38 @@ class Payment(Base):
     id = Column(Integer, primary_key=True, index=True)
     cita_id = Column(Integer, ForeignKey("appointments.id"), nullable=False)
     monto = Column(Float, nullable=False)
-    metodo = Column(String(50), default="tarjeta")
-    estado = Column(String(30), default="pendiente")  # pendiente|exitoso|fallido
+    metodo = Column(String(50), default="tarjeta")  # tarjeta|sinpe|stripe|mercadopago|urgente
+    estado = Column(String(30), default="pendiente")  # pendiente|pendiente_verificacion|exitoso|fallido
     referencia_externa = Column(String(255), default="")
     fecha_pago = Column(DateTime, default=datetime.utcnow)
+    # SINPE Móvil
+    sinpe_referencia = Column(String(100), nullable=True)
+    sinpe_telefono = Column(String(20), nullable=True)
+    comprobante_b64 = Column(Text, nullable=True)   # imagen base64 del comprobante
+    verificado_por = Column(Integer, nullable=True)  # admin_id (no FK para simplificar)
+    verificado_en = Column(DateTime, nullable=True)
 
     cita = relationship("Appointment", back_populates="pago")
+
+
+class Subscription(Base):
+    """Planes de suscripción mensual del paciente."""
+    __tablename__ = "subscriptions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    paciente_id = Column(Integer, ForeignKey("patients.id"), nullable=False)
+    plan = Column(String(30), nullable=False)          # basico|premium|ilimitado
+    estado = Column(String(20), default="activo")      # activo|cancelado|expirado
+    consultas_incluidas = Column(Integer, default=0)   # 0 = ilimitado
+    consultas_usadas = Column(Integer, default=0)
+    inicio = Column(DateTime, nullable=False)
+    fin = Column(DateTime, nullable=False)
+    monto = Column(Float, nullable=False)              # en USD
+    moneda = Column(String(5), default="USD")
+    stripe_subscription_id = Column(String(100), nullable=True)
+    creado_en = Column(DateTime, default=datetime.utcnow)
+
+    paciente = relationship("Patient", foreign_keys=[paciente_id])
 
 
 class DoctorLead(Base):

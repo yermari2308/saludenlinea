@@ -5,6 +5,7 @@ import '../services/api_service.dart';
 import 'login_screen.dart';
 import 'medical_record_screen.dart';
 import 'hra_screen.dart';
+import 'subscription_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -178,6 +179,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             value: _patient!.email,
           ),
           const SizedBox(height: 20),
+          // ── Banner Suscripción ────────────────────────────────────────────
+          _SuscripcionBanner(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
+            ),
+          ),
+          const SizedBox(height: 12),
           // ── Banner HRA ────────────────────────────────────────────────
           _HraBanner(
             onTap: () => Navigator.push(
@@ -370,6 +379,70 @@ class _InfoTile extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Banner HRA ────────────────────────────────────────────────────────────────
+
+// ── Banner Suscripción ────────────────────────────────────────────────────────
+
+class _SuscripcionBanner extends StatelessWidget {
+  final VoidCallback onTap;
+  const _SuscripcionBanner({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: const Border(
+              left: BorderSide(color: AppColors.primaryLight, width: 3)),
+          boxShadow: [AppTheme.cardShadow],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.card_membership_rounded,
+                  color: AppColors.primaryLight, size: 20),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Planes de suscripción',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  SizedBox(height: 3),
+                  Text(
+                    'Consultas ilimitadas desde \$9.99/mes',
+                    style: TextStyle(
+                        fontSize: 11, color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.arrow_forward_ios_rounded,
+                size: 14, color: AppColors.textHint),
+          ],
+        ),
       ),
     );
   }

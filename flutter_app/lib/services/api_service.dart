@@ -258,6 +258,78 @@ class ApiService {
     return _parse(res);
   }
 
+  static Future<Map<String, dynamic>> getSinpeInfo() async {
+    final res = await DohClient.get(
+      '$baseUrl/api/payments/sinpe/info',
+      headers: await _headers(),
+    );
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> reportarSinpe({
+    required int appointmentId,
+    required String sinpeReferencia,
+    required String sinpeTelefono,
+    String? comprobanteB64,
+  }) async {
+    final res = await DohClient.post(
+      '$baseUrl/api/payments/sinpe',
+      headers: await _headers(),
+      body: jsonEncode({
+        'appointment_id': appointmentId,
+        'sinpe_referencia': sinpeReferencia,
+        'sinpe_telefono': sinpeTelefono,
+        if (comprobanteB64 != null) 'comprobante_b64': comprobanteB64,
+      }),
+    );
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> getSinpeStatus(int appointmentId) async {
+    final res = await DohClient.get(
+      '$baseUrl/api/payments/sinpe/status/$appointmentId',
+      headers: await _headers(),
+    );
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> stripeCheckout(int appointmentId) async {
+    final res = await DohClient.post(
+      '$baseUrl/api/payments/stripe/checkout',
+      headers: await _headers(),
+      body: jsonEncode({'appointment_id': appointmentId}),
+    );
+    return _parse(res);
+  }
+
+  // ── Suscripciones ─────────────────────────────────────────────────────────
+
+  static Future<List<Map<String, dynamic>>> getPlanes() async {
+    final res = await DohClient.get(
+      '$baseUrl/api/subscriptions/planes',
+      headers: await _headers(),
+    );
+    final data = _parse(res) as List;
+    return data.cast<Map<String, dynamic>>();
+  }
+
+  static Future<Map<String, dynamic>> getMiSuscripcion() async {
+    final res = await DohClient.get(
+      '$baseUrl/api/subscriptions/me',
+      headers: await _headers(),
+    );
+    return _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> subscribirStripe(String plan) async {
+    final res = await DohClient.post(
+      '$baseUrl/api/subscriptions/subscribe/stripe',
+      headers: await _headers(),
+      body: jsonEncode({'plan': plan, 'metodo': 'stripe'}),
+    );
+    return _parse(res);
+  }
+
   // ── Urgent Queue (Botón Rojo) ─────────────────────────────────────────────
 
   static Future<Map<String, dynamic>> joinUrgentQueue({

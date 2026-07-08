@@ -10,7 +10,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from database import engine
 from models import Base
-from routers import auth, doctors, appointments, patients, leads, admin, payments, google_auth, chat, password_reset, urgent, medical_record, hra
+from routers import auth, doctors, appointments, patients, leads, admin, payments, google_auth, chat, password_reset, urgent, medical_record, hra, subscriptions
 
 load_dotenv()
 
@@ -37,8 +37,14 @@ def _run_migrations():
             "ALTER TABLE doctors ADD COLUMN IF NOT EXISTS disponible_urgente BOOLEAN DEFAULT FALSE",
             "ALTER TABLE consult_queue ADD COLUMN IF NOT EXISTS sala_token VARCHAR(255)",
             "ALTER TABLE consult_queue ADD COLUMN IF NOT EXISTS asignada_en TIMESTAMP",
-            # Fase 2: expediente clínico — la tabla se crea via create_all, pero columnas opcionales
+            # Fase 2: expediente clínico
             "ALTER TABLE medical_records ADD COLUMN IF NOT EXISTS salud_femenina TEXT",
+            # Fase 4: pagos SINPE + Stripe
+            "ALTER TABLE payments ADD COLUMN IF NOT EXISTS sinpe_referencia VARCHAR(100)",
+            "ALTER TABLE payments ADD COLUMN IF NOT EXISTS sinpe_telefono VARCHAR(20)",
+            "ALTER TABLE payments ADD COLUMN IF NOT EXISTS comprobante_b64 TEXT",
+            "ALTER TABLE payments ADD COLUMN IF NOT EXISTS verificado_por INTEGER",
+            "ALTER TABLE payments ADD COLUMN IF NOT EXISTS verificado_en TIMESTAMP",
         ]
         for sql in migrations:
             try:
@@ -117,6 +123,7 @@ app.include_router(password_reset.router)
 app.include_router(urgent.router)
 app.include_router(medical_record.router)
 app.include_router(hra.router)
+app.include_router(subscriptions.router)
 
 
 @app.get("/api")
