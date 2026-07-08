@@ -5,6 +5,9 @@ on:
     branches: [master]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -35,3 +38,14 @@ jobs:
           name: SaludEnLinea-APK
           path: flutter_app/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
+
+      - name: Rename APK
+        run: cp flutter_app/build/app/outputs/flutter-apk/app-release.apk SaludEnLinea.apk
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: SaludEnLínea v1.0.${{ github.run_number }}
+          files: SaludEnLinea.apk
+          make_latest: true

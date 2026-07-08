@@ -9,7 +9,7 @@ Planes disponibles:
 import os
 import logging
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException, Header, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from database import get_db
@@ -23,6 +23,7 @@ router = APIRouter(prefix="/api/subscriptions", tags=["subscriptions"])
 ADMIN_KEY = os.getenv("ADMIN_KEY", "saludenlinea-admin-2025")
 
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
+STRIPE_WEBHOOK_SECRET_SUB = os.getenv("STRIPE_WEBHOOK_SECRET_SUB", "")
 BASE_URL = os.getenv("BASE_URL", "https://saludenlinea-production.up.railway.app")
 
 try:
@@ -154,9 +155,8 @@ def suscribir_stripe(
 
 
 @router.post("/stripe/webhook")
-async def stripe_sub_webhook(request, db: Session = Depends(get_db)):
+async def stripe_sub_webhook(request: Request, db: Session = Depends(get_db)):
     """Stripe notifica aquí cuando se completa el pago de suscripción."""
-    from fastapi import Request as FR
     if not STRIPE_AVAILABLE or not STRIPE_WEBHOOK_SECRET_SUB:
         return {"status": "ignored"}
 
@@ -166,10 +166,9 @@ async def stripe_sub_webhook(request, db: Session = Depends(get_db)):
 
     try:
         event = stripe_lib.Webhook.construct_event(
-            payload, sig, os.getenv("STRIPE_WEBHOOK_SECRET_SUB", ""))
+            payload, sig, STRIPE_WEBHOOK_SECRET_SUB)
     except Exception:
-        from fastapi.responses import JSONResponse
-        return JSONResponse(status_code=400, content={"detail": "Firma inválida"})
+        raise HTTPException(status_code=400, detail="Firma inválida")
 
     if event["type"] == "checkout.session.completed":
         session = event["data"]["object"]
@@ -267,6 +266,3 @@ def admin_cancelar_plan(
     sub.estado = "cancelado"
     db.commit()
     return {"mensaje": "Suscripción cancelada"}
-
-
-STRIPE_WEBHOOK_SECRET_SUB = os.getenv("STRIPE_WEBHOOK_SECRET_SUB", "")
