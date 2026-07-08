@@ -154,7 +154,7 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen>
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
+      onPopInvoked: (didPop) {
         if (!didPop) _cancelar();
       },
       child: Scaffold(
