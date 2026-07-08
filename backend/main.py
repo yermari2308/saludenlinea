@@ -148,3 +148,70 @@ def root():
 _flutter_build = os.path.join(os.path.dirname(__file__), "..", "flutter_app", "build", "web")
 if os.path.isdir(_flutter_build):
     app.mount("/", StaticFiles(directory=_flutter_build, html=True), name="frontend")
+else:
+    # Landing page (el contenedor de Railway solo incluye el backend)
+    from fastapi.responses import HTMLResponse
+
+    _LANDING = """<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SaludEnLínea — Telemedicina en Costa Rica</title>
+<meta name="description" content="Plataforma de telemedicina que conecta pacientes con médicos certificados en Costa Rica: videoconsultas, expediente clínico, farmacia con entrega a domicilio.">
+<style>
+  * { margin:0; box-sizing:border-box; font-family:'Segoe UI',system-ui,sans-serif; }
+  body { color:#1a2b3c; background:#fff; }
+  .hero { background:linear-gradient(135deg,#0B2545 0%,#13315C 60%,#134074 100%); color:#fff;
+          padding:72px 24px 84px; text-align:center; }
+  .hero .logo { font-size:52px; }
+  .hero h1 { font-size:clamp(30px,6vw,44px); margin:12px 0 10px; letter-spacing:-0.5px; }
+  .hero h1 span { color:#00C896; }
+  .hero p { max-width:560px; margin:0 auto 28px; font-size:17px; line-height:1.6; opacity:.85; }
+  .btn { display:inline-block; background:#00C896; color:#06283d; font-weight:700;
+         padding:14px 32px; border-radius:12px; text-decoration:none; font-size:16px; }
+  .btn.sec { background:transparent; color:#fff; border:1.5px solid rgba(255,255,255,.4); margin-left:10px; }
+  .features { max-width:960px; margin:-40px auto 0; padding:0 24px 60px;
+              display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; }
+  .card { background:#fff; border-radius:16px; padding:26px 22px;
+          box-shadow:0 10px 34px rgba(11,37,69,.12); }
+  .card .ic { font-size:30px; }
+  .card h3 { margin:10px 0 6px; font-size:16px; }
+  .card p { font-size:13.5px; color:#5a6b7c; line-height:1.55; }
+  footer { border-top:1px solid #e7ecf1; padding:26px 24px; text-align:center;
+           font-size:13px; color:#7b8a99; }
+  footer a { color:#134074; }
+</style>
+</head>
+<body>
+  <section class="hero">
+    <div class="logo">🩺</div>
+    <h1>Salud<span>En</span>Línea</h1>
+    <p>Consultas médicas por video con profesionales certificados, expediente clínico digital,
+       atención urgente 24/7 y farmacia con entrega a domicilio — desde tu celular, en Costa Rica.</p>
+    <a class="btn" href="https://github.com/yermari2308/saludenlinea/releases/latest">📲 Descargar app (Android)</a>
+  </section>
+  <section class="features">
+    <div class="card"><div class="ic">🎥</div><h3>Videoconsultas</h3>
+      <p>Atención médica por videollamada cifrada con médicos generales y especialistas, con receta digital al finalizar.</p></div>
+    <div class="card"><div class="ic">🚨</div><h3>Botón de urgencia</h3>
+      <p>Cola de atención inmediata: un médico disponible te atiende en minutos, sin cita previa.</p></div>
+    <div class="card"><div class="ic">📋</div><h3>Expediente clínico</h3>
+      <p>Tu historial médico completo y evaluación de salud (HRA) siempre disponibles y protegidos.</p></div>
+    <div class="card"><div class="ic">💊</div><h3>Farmacia en línea</h3>
+      <p>Pedí medicamentos y productos de salud con entrega a domicilio. Validación de recetas incluida.</p></div>
+    <div class="card"><div class="ic">💳</div><h3>Pagos locales</h3>
+      <p>Pagá con SINPE Móvil o tarjeta de crédito/débito de forma segura. Planes de suscripción desde $9.99/mes.</p></div>
+    <div class="card"><div class="ic">🔒</div><h3>Datos protegidos</h3>
+      <p>Cifrado SSL en todas las comunicaciones, autenticación segura y datos alojados con respaldo.</p></div>
+  </section>
+  <footer>
+    SaludEnLínea · Costa Rica · <a href="mailto:yermariflores081@gmail.com">Contacto</a>
+    · <a href="/api">API</a>
+  </footer>
+</body>
+</html>"""
+
+    @app.get("/", response_class=HTMLResponse, include_in_schema=False)
+    def landing():
+        return _LANDING
