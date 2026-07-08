@@ -8,6 +8,7 @@ import '../models/models.dart';
 import '../services/api_service.dart';
 import 'consultation_screen.dart';
 import 'chat_screen.dart';
+import 'payment_screen.dart';
 
 class AppointmentsScreen extends StatefulWidget {
   const AppointmentsScreen({super.key});
@@ -63,6 +64,77 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
       case 'completada': return 'COMPLETADA';
       case 'cancelada': return 'CANCELADA';
       default: return estado.toUpperCase();
+    }
+  }
+
+  Future<void> _entrarConsulta(Appointment apt) async {
+    final prefs = await ApiService.getUserInfo();
+    final esDoctor = (prefs['role'] ?? '') == 'doctor';
+
+    if (!esDoctor) {
+      // Verificar pago antes de entrar (el backend también lo exige)
+      try {
+        final info = await ApiService.getAppointmentPago(apt.id);
+        if (!mounted) return;
+        if (info['requiere_pago'] == true) {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => PaymentScreen(
+                appointmentId: apt.id,
+                doctorNombre: info['doctor_nombre'] as String? ?? 'Médico',
+                monto: (info['monto'] as num?)?.toDouble() ?? 0,
+              ),
+            ),
+          );
+          _load();
+          return;
+        }
+      } catch (e) {
+        if (!mounted) return;
+        _showError(e.toString());
+        return;
+      }
+    }
+    if (!mounted) return;
+    Navigator.push(context, MaterialPageRoute(
+        builder: (_) => ConsultationScreen(appointmentId: apt.id)));
+  }
+
+  Future<void> _ocultarCita(int id) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Eliminar del historial',
+            style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+        content: const Text(
+          'La cita dejará de aparecer en tu lista. Tus recetas y datos médicos '
+          'se conservan de forma segura y el médico mantiene su registro.',
+          style: TextStyle(color: AppColors.textSecondary, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Volver'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.error,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+            child: const Text('Eliminar', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ApiService.ocultarCita(id);
+      _load();
+    } catch (e) {
+      if (!mounted) return;
+      _showError(e.toString());
     }
   }
 
@@ -187,9 +259,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                       estadoColor: _estadoColor(_appointments[i].estado),
                       estadoLabel: _estadoLabel(_appointments[i].estado),
                       onEntrarConsulta: _appointments[i].estado == 'programada'
-                          ? () => Navigator.push(context, MaterialPageRoute(
-                              builder: (_) => ConsultationScreen(
-                                  appointmentId: _appointments[i].id)))
+                          ? () => _entrarConsulta(_appointments[i])
                           : null,
                       onChat: _appointments[i].estado == 'programada'
                           ? () => _abrirChat(_appointments[i].id)
@@ -203,6 +273,9 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                       onDescargarReceta: _appointments[i].recetaArchivoNombre.isNotEmpty
                           ? () => _descargarReceta(
                               _appointments[i].id, _appointments[i].recetaArchivoNombre)
+                          : null,
+                      onOcultar: _appointments[i].estado != 'programada'
+                          ? () => _ocultarCita(_appointments[i].id)
                           : null,
                     ),
                   ),
@@ -246,6 +319,7 @@ class _AppointmentCard extends StatefulWidget {
   final VoidCallback? onReagendar;
   final VoidCallback? onCancelar;
   final VoidCallback? onDescargarReceta;
+  final VoidCallback? onOcultar;
 
   const _AppointmentCard({
     required this.apt,
@@ -256,6 +330,7 @@ class _AppointmentCard extends StatefulWidget {
     this.onReagendar,
     this.onCancelar,
     this.onDescargarReceta,
+    this.onOcultar,
   });
 
   @override
@@ -395,6 +470,21 @@ class _AppointmentCardState extends State<_AppointmentCard> {
                         ),
                       ),
                     ],
+                  ],
+                  // Ocultar del historial (completadas y canceladas)
+                  if (widget.onOcultar != null) ...[
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        icon: const Icon(Icons.delete_outline_rounded,
+                            size: 16, color: AppColors.textHint),
+                        label: const Text('Eliminar del historial',
+                            style: TextStyle(
+                                fontSize: 12, color: AppColors.textHint)),
+                        onPressed: widget.onOcultar,
+                      ),
+                    ),
                   ],
                   // Acciones programada
                   if (isProgramada) ...[

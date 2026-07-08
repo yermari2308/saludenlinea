@@ -45,6 +45,7 @@ def _run_migrations():
             "ALTER TABLE payments ADD COLUMN IF NOT EXISTS comprobante_b64 TEXT",
             "ALTER TABLE payments ADD COLUMN IF NOT EXISTS verificado_por INTEGER",
             "ALTER TABLE payments ADD COLUMN IF NOT EXISTS verificado_en TIMESTAMP",
+            "ALTER TABLE appointments ADD COLUMN IF NOT EXISTS oculta_paciente BOOLEAN DEFAULT FALSE",
         ]
         for sql in migrations:
             try:

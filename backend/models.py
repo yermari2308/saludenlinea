@@ -56,6 +56,7 @@ class Appointment(Base):
     receta_texto = Column(Text, default="")
     receta_archivo_nombre = Column(String(255), default="")
     receta_archivo_b64 = Column(Text, default="")
+    oculta_paciente = Column(Boolean, default=False)  # oculta del historial del paciente
     creado_en = Column(DateTime, default=datetime.utcnow)
 
     paciente = relationship("Patient", back_populates="citas")

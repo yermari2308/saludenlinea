@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from database import get_db
-from models import Appointment, Doctor, Payment, ConsultSession
+from models import Appointment, Doctor, Payment, ConsultSession, Subscription
 from schemas import AppointmentCreate, AppointmentOut, NotasUpdate, SessionOut, RescheduleRequest
 from utils.auth import require_patient, require_doctor, get_current_user
 
@@ -26,6 +26,49 @@ def _jitsi_url(token_sala: str, display_name: str = "") -> str:
         safe = display_name.replace(" ", "%20")
         return f"{base}#userInfo.displayName=\"{safe}\""
     return base
+
+
+def _suscripcion_activa_con_cupo(paciente_id: int, db: Session):
+    """Retorna la suscripción activa con consultas disponibles, o None."""
+    ahora = datetime.utcnow()
+    sub = db.query(Subscription).filter(
+        Subscription.paciente_id == paciente_id,
+        Subscription.estado == "activo",
+        Subscription.fin >= ahora,
+    ).first()
+    if sub and (sub.consultas_incluidas == 0 or sub.consultas_usadas < sub.consultas_incluidas):
+        return sub
+    return None
+
+
+def _verificar_pago_o_suscripcion(cita: Appointment, db: Session):
+    """
+    Bloquea el ingreso a la consulta si la cita no está pagada.
+    Excepciones: consultas urgentes (Botón Rojo) y suscripción activa con cupo
+    (en cuyo caso se consume una consulta del plan automáticamente).
+    """
+    pago = db.query(Payment).filter(Payment.cita_id == cita.id).first()
+
+    if pago and pago.estado == "exitoso":
+        return
+    if pago and pago.metodo == "urgente":
+        return  # urgencias se cobran aparte, no se bloquea la atención
+
+    sub = _suscripcion_activa_con_cupo(cita.paciente_id, db)
+    if sub:
+        sub.consultas_usadas += 1
+        if pago:
+            pago.estado = "exitoso"
+            pago.metodo = "suscripcion"
+        else:
+            db.add(Payment(cita_id=cita.id, monto=0.0, metodo="suscripcion", estado="exitoso"))
+        db.commit()
+        return
+
+    raise HTTPException(
+        status_code=402,
+        detail="Debes completar el pago antes de entrar a la consulta.",
+    )
 
 
 @router.post("/appointments", response_model=AppointmentOut, status_code=201)
@@ -68,7 +111,10 @@ def list_appointments(
     role = current["role"]
     uid = int(current["sub"])
     if role == "patient":
-        return db.query(Appointment).filter(Appointment.paciente_id == uid).all()
+        return db.query(Appointment).filter(
+            Appointment.paciente_id == uid,
+            (Appointment.oculta_paciente == False) | (Appointment.oculta_paciente.is_(None)),  # noqa: E712
+        ).all()
     else:
         return db.query(Appointment).filter(Appointment.doctor_id == uid).all()
 
@@ -113,6 +159,10 @@ def get_or_create_session(
     if role == "doctor" and cita.doctor_id != uid:
         raise HTTPException(status_code=403, detail="No autorizado")
 
+    # ── El paciente debe haber pagado antes de entrar ─────────────────────────
+    if role == "patient":
+        _verificar_pago_o_suscripcion(cita, db)
+
     sesion = db.query(ConsultSession).filter(ConsultSession.cita_id == appointment_id).first()
     if not sesion:
         sesion = ConsultSession(
@@ -127,6 +177,61 @@ def get_or_create_session(
     display = cita.paciente.nombre if role == "patient" else cita.doctor.nombre
     sesion.jitsi_url = _jitsi_url(sesion.token_sala, display)
     return sesion
+
+
+@router.get("/appointments/{appointment_id}/pago")
+def estado_pago_cita(
+    appointment_id: int,
+    db: Session = Depends(get_db),
+    current=Depends(require_patient),
+):
+    """La app consulta esto antes de entrar: ¿requiere pago o ya está cubierta?"""
+    cita = db.query(Appointment).filter(
+        Appointment.id == appointment_id,
+        Appointment.paciente_id == int(current["sub"]),
+    ).first()
+    if not cita:
+        raise HTTPException(status_code=404, detail="Cita no encontrada")
+
+    doctor = db.query(Doctor).filter(Doctor.id == cita.doctor_id).first()
+    pago = db.query(Payment).filter(Payment.cita_id == cita.id).first()
+
+    cubierta = bool(
+        (pago and pago.estado == "exitoso")
+        or (pago and pago.metodo == "urgente")
+        or _suscripcion_activa_con_cupo(cita.paciente_id, db)
+    )
+    return {
+        "requiere_pago": not cubierta,
+        "estado_pago": pago.estado if pago else "sin_pago",
+        "metodo": pago.metodo if pago else "",
+        "monto": doctor.tarifa if doctor else 0.0,
+        "doctor_nombre": doctor.nombre if doctor else "",
+    }
+
+
+@router.post("/appointments/{appointment_id}/ocultar")
+def ocultar_cita(
+    appointment_id: int,
+    db: Session = Depends(get_db),
+    current=Depends(require_patient),
+):
+    """Oculta una cita finalizada o cancelada del historial del paciente.
+    El registro médico se conserva (recetas, notas y pagos siguen existiendo)."""
+    cita = db.query(Appointment).filter(
+        Appointment.id == appointment_id,
+        Appointment.paciente_id == int(current["sub"]),
+    ).first()
+    if not cita:
+        raise HTTPException(status_code=404, detail="Cita no encontrada")
+    if cita.estado == "programada":
+        raise HTTPException(
+            status_code=400,
+            detail="No puedes ocultar una cita programada. Cancélala primero.",
+        )
+    cita.oculta_paciente = True
+    db.commit()
+    return {"message": "Cita ocultada de tu historial"}
 
 
 @router.put("/consultation/{appointment_id}/notes")

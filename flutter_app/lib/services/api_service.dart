@@ -162,6 +162,22 @@ class ApiService {
     _parse(res);
   }
 
+  static Future<Map<String, dynamic>> getAppointmentPago(int id) async {
+    final res = await DohClient.get(
+      '$baseUrl/api/appointments/$id/pago',
+      headers: await _headers(),
+    );
+    return _parse(res);
+  }
+
+  static Future<void> ocultarCita(int id) async {
+    final res = await DohClient.post(
+      '$baseUrl/api/appointments/$id/ocultar',
+      headers: await _headers(),
+    );
+    _parse(res);
+  }
+
   static Future<Map<String, dynamic>> getConsultSession(int appointmentId) async {
     final res = await DohClient.get(
       '$baseUrl/api/consultation/$appointmentId',
