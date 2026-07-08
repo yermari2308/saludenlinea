@@ -204,6 +204,64 @@ class ConsultQueue(Base):
     doctor = relationship("Doctor", back_populates="cola_items", foreign_keys=[doctor_id])
 
 
+class PharmacyProduct(Base):
+    """Catálogo de productos de farmacia."""
+    __tablename__ = "pharmacy_products"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String(150), nullable=False)
+    descripcion = Column(Text, default="")
+    precio = Column(Float, nullable=False)             # USD
+    requiere_receta = Column(Boolean, default=False)
+    stock = Column(Integer, default=0)
+    imagen_url = Column(String(500), default="")
+    categoria = Column(String(50), default="general")  # general|analgesicos|vitaminas|cuidado_personal|cronicos
+    activo = Column(Boolean, default=True)
+    creado_en = Column(DateTime, default=datetime.utcnow)
+
+
+class CartItem(Base):
+    """Carrito de compras del paciente."""
+    __tablename__ = "cart_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    paciente_id = Column(Integer, ForeignKey("patients.id"), nullable=False)
+    producto_id = Column(Integer, ForeignKey("pharmacy_products.id"), nullable=False)
+    cantidad = Column(Integer, default=1)
+    agregado_en = Column(DateTime, default=datetime.utcnow)
+
+    producto = relationship("PharmacyProduct", foreign_keys=[producto_id])
+
+
+class PharmacyOrder(Base):
+    """Pedido de farmacia."""
+    __tablename__ = "pharmacy_orders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    paciente_id = Column(Integer, ForeignKey("patients.id"), nullable=False)
+    total = Column(Float, nullable=False)
+    estado = Column(String(30), default="pendiente")  # pendiente|confirmado|enviado|entregado|cancelado
+    direccion_entrega = Column(Text, nullable=False)
+    metodo_pago = Column(String(30), default="sinpe")  # sinpe|contra_entrega
+    creado_en = Column(DateTime, default=datetime.utcnow)
+
+    items = relationship("OrderItem", back_populates="orden")
+    paciente = relationship("Patient", foreign_keys=[paciente_id])
+
+
+class OrderItem(Base):
+    __tablename__ = "order_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("pharmacy_orders.id"), nullable=False)
+    producto_id = Column(Integer, ForeignKey("pharmacy_products.id"), nullable=False)
+    cantidad = Column(Integer, default=1)
+    precio_unitario = Column(Float, nullable=False)
+
+    orden = relationship("PharmacyOrder", back_populates="items")
+    producto = relationship("PharmacyProduct", foreign_keys=[producto_id])
+
+
 class PasswordResetToken(Base):
     __tablename__ = "password_reset_tokens"
 

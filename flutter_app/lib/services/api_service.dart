@@ -460,6 +460,76 @@ class ApiService {
     return _parse(res);
   }
 
+  // ── Farmacia ──────────────────────────────────────────────────────────────
+
+  static Future<List<Map<String, dynamic>>> getPharmacyProducts({String? categoria}) async {
+    final params = categoria != null ? '?categoria=$categoria' : '';
+    final res = await DohClient.get(
+      '$baseUrl/api/pharmacy/products$params',
+      headers: await _headers(),
+    );
+    final data = _parse(res) as List;
+    return data.cast<Map<String, dynamic>>();
+  }
+
+  static Future<Map<String, dynamic>> getCart() async {
+    final res = await DohClient.get(
+      '$baseUrl/api/pharmacy/cart',
+      headers: await _headers(),
+    );
+    return _parse(res);
+  }
+
+  static Future<void> addToCart(int productoId, {int cantidad = 1}) async {
+    final res = await DohClient.post(
+      '$baseUrl/api/pharmacy/cart',
+      headers: await _headers(),
+      body: jsonEncode({'producto_id': productoId, 'cantidad': cantidad}),
+    );
+    _parse(res);
+  }
+
+  static Future<void> updateCartItem(int itemId, int cantidad) async {
+    final res = await DohClient.put(
+      '$baseUrl/api/pharmacy/cart/$itemId',
+      headers: await _headers(),
+      body: jsonEncode({'cantidad': cantidad}),
+    );
+    _parse(res);
+  }
+
+  static Future<void> removeCartItem(int itemId) async {
+    final res = await DohClient.delete(
+      '$baseUrl/api/pharmacy/cart/$itemId',
+      headers: await _headers(),
+    );
+    _parse(res);
+  }
+
+  static Future<Map<String, dynamic>> pharmacyCheckout({
+    required String direccionEntrega,
+    required String metodoPago,
+  }) async {
+    final res = await DohClient.post(
+      '$baseUrl/api/pharmacy/checkout',
+      headers: await _headers(),
+      body: jsonEncode({
+        'direccion_entrega': direccionEntrega,
+        'metodo_pago': metodoPago,
+      }),
+    );
+    return _parse(res);
+  }
+
+  static Future<List<Map<String, dynamic>>> getPharmacyOrders() async {
+    final res = await DohClient.get(
+      '$baseUrl/api/pharmacy/orders',
+      headers: await _headers(),
+    );
+    final data = _parse(res) as List;
+    return data.cast<Map<String, dynamic>>();
+  }
+
   // ── Patient ───────────────────────────────────────────────────────────────
 
   static Future<Patient> getMyProfile() async {

@@ -10,7 +10,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from database import engine
 from models import Base
-from routers import auth, doctors, appointments, patients, leads, admin, payments, google_auth, chat, password_reset, urgent, medical_record, hra, subscriptions
+from routers import auth, doctors, appointments, patients, leads, admin, payments, google_auth, chat, password_reset, urgent, medical_record, hra, subscriptions, pharmacy
 
 load_dotenv()
 
@@ -54,6 +54,19 @@ def _run_migrations():
                 logger.warning("Migración omitida: %s — %s", sql[:60], e)
 
 _run_migrations()
+
+# Seed inicial de farmacia (solo si el catálogo está vacío)
+def _seed_pharmacy():
+    from database import SessionLocal
+    db = SessionLocal()
+    try:
+        pharmacy.seed_products(db)
+    except Exception as e:
+        logger.warning("Seed farmacia omitido: %s", e)
+    finally:
+        db.close()
+
+_seed_pharmacy()
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -124,6 +137,7 @@ app.include_router(urgent.router)
 app.include_router(medical_record.router)
 app.include_router(hra.router)
 app.include_router(subscriptions.router)
+app.include_router(pharmacy.router)
 
 
 @app.get("/api")

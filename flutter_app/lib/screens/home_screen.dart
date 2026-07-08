@@ -4,6 +4,7 @@ import '../app_theme.dart';
 import '../services/api_service.dart';
 import 'doctors_screen.dart';
 import 'appointments_screen.dart';
+import 'pharmacy_screen.dart';
 import 'profile_screen.dart';
 import 'waiting_room_screen.dart';
 
@@ -21,6 +22,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<Widget> _screens = const [
     DoctorsScreen(),
     AppointmentsScreen(),
+    PharmacyScreen(),
     ProfileScreen(),
   ];
 
@@ -148,6 +150,7 @@ class _BottomBar extends StatelessWidget {
     final items = [
       (Icons.search_rounded, 'Médicos'),
       (Icons.calendar_month_rounded, 'Mis citas'),
+      (Icons.local_pharmacy_rounded, 'Farmacia'),
       (Icons.person_rounded, 'Perfil'),
     ];
 
@@ -186,7 +189,7 @@ class _BottomBar extends StatelessWidget {
   }
 
   Widget _buildWithFabSlot(List<(IconData, String)> items) {
-    // Índices 0,1 a la izquierda | slot FAB | índice 2 a la derecha
+    // Índices 0,1 a la izquierda | slot FAB | índices 2,3 a la derecha
     return Row(
       children: [
         _NavItem(
@@ -201,12 +204,18 @@ class _BottomBar extends StatelessWidget {
           selected: currentIndex == 1,
           onTap: () => onTap(1),
         ),
-        const SizedBox(width: 80), // espacio para el FAB centrado
+        const SizedBox(width: 72), // espacio para el FAB centrado
         _NavItem(
           icon: items[2].$1,
           label: items[2].$2,
           selected: currentIndex == 2,
           onTap: () => onTap(2),
+        ),
+        _NavItem(
+          icon: items[3].$1,
+          label: items[3].$2,
+          selected: currentIndex == 3,
+          onTap: () => onTap(3),
         ),
       ],
     );
