@@ -210,11 +210,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
                 child: _loading
-                    ? const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 60),
-                        child: Center(
-                            child: CircularProgressIndicator(
-                                color: AppColors.primaryLight)),
+                    ? const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Skeleton(width: 140, height: 12),
+                          SizedBox(height: 12),
+                          Skeleton(width: double.infinity, height: 84, radius: 18),
+                          SizedBox(height: 24),
+                          Skeleton(width: 140, height: 12),
+                          SizedBox(height: 12),
+                          Row(children: [
+                            Expanded(child: Skeleton(height: 104, radius: 18)),
+                            SizedBox(width: 12),
+                            Expanded(child: Skeleton(height: 104, radius: 18)),
+                            SizedBox(width: 12),
+                            Expanded(child: Skeleton(height: 104, radius: 18)),
+                          ]),
+                          SizedBox(height: 12),
+                          Row(children: [
+                            Expanded(child: Skeleton(height: 104, radius: 18)),
+                            SizedBox(width: 12),
+                            Expanded(child: Skeleton(height: 104, radius: 18)),
+                            SizedBox(width: 12),
+                            Expanded(child: Skeleton(height: 104, radius: 18)),
+                          ]),
+                        ],
                       )
                     : Column(
                         crossAxisAlignment: CrossAxisAlignment.start,

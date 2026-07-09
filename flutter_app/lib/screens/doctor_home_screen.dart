@@ -153,6 +153,7 @@ class _DoctorInicioTabState extends State<_DoctorInicioTab> {
   bool _disponibleUrgente = false;
   List<Map<String, dynamic>> _cola = [];
   bool _loadingCola = false;
+  double _ingresosMes = 0;
 
   @override
   void initState() {
@@ -166,6 +167,12 @@ class _DoctorInicioTabState extends State<_DoctorInicioTab> {
     ApiService.getUserInfo().then((info) {
       if (mounted) setState(() => _nombreDoctor = info['nombre'] ?? 'Doctor');
     });
+    ApiService.getDoctorIngresos().then((data) {
+      if (mounted) {
+        setState(() =>
+            _ingresosMes = (data['total_mes'] as num?)?.toDouble() ?? 0);
+      }
+    }).catchError((_) {});
   }
 
   Future<void> _cargarUrgente() async {
@@ -497,8 +504,19 @@ class _DoctorInicioTabState extends State<_DoctorInicioTab> {
                   value: completadas.toString(),
                   icon: Icons.check_circle_rounded,
                   color: AppColors.accentDark),
+              const SizedBox(width: 10),
+              _StatCard(
+                  label: 'Mes',
+                  value: '\$${_ingresosMes.toStringAsFixed(0)}',
+                  icon: Icons.payments_rounded,
+                  color: AppColors.success),
             ],
           ),
+        ),
+        // ── Gráfico: consultas de los últimos 7 días ──────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: _WeeklyChart(citas: citas),
         ),
         if (citasHoy.isNotEmpty) ...[
           const _SectionTitle(title: 'Citas de hoy', top: true),
@@ -591,6 +609,94 @@ class _DoctorInicioTabState extends State<_DoctorInicioTab> {
           ),
         ),
       );
+}
+
+/// Gráfico de barras: consultas por día de los últimos 7 días.
+class _WeeklyChart extends StatelessWidget {
+  final List<Appointment> citas;
+  const _WeeklyChart({required this.citas});
+
+  static const _dias = ['L', 'K', 'M', 'J', 'V', 'S', 'D'];
+
+  @override
+  Widget build(BuildContext context) {
+    final hoy = DateTime.now();
+    final conteo = List<int>.filled(7, 0);
+    for (final c in citas) {
+      final diff = hoy.difference(
+          DateTime(c.fechaHora.year, c.fechaHora.month, c.fechaHora.day)).inDays;
+      if (diff >= 0 && diff < 7) conteo[6 - diff]++;
+    }
+    final maxV = conteo.fold<int>(1, (a, b) => a > b ? a : b);
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [AppTheme.cardShadow],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('CONSULTAS · ÚLTIMOS 7 DÍAS',
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textSecondary,
+                  letterSpacing: 0.6)),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 72,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: List.generate(7, (i) {
+                final diaIdx =
+                    (hoy.subtract(Duration(days: 6 - i)).weekday - 1) % 7;
+                final esHoy = i == 6;
+                return Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (conteo[i] > 0)
+                        Text('${conteo[i]}',
+                            style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: esHoy
+                                    ? AppColors.primaryLight
+                                    : AppColors.textHint)),
+                      const SizedBox(height: 3),
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        width: 18,
+                        height: 6 + 42 * (conteo[i] / maxV),
+                        decoration: BoxDecoration(
+                          color: esHoy
+                              ? AppColors.primaryLight
+                              : AppColors.primaryLight.withOpacity(0.25),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(_dias[diaIdx],
+                          style: TextStyle(
+                              fontSize: 10,
+                              fontWeight:
+                                  esHoy ? FontWeight.w800 : FontWeight.w500,
+                              color: esHoy
+                                  ? AppColors.primaryLight
+                                  : AppColors.textHint)),
+                    ],
+                  ),
+                );
+              }),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _StatCard extends StatelessWidget {

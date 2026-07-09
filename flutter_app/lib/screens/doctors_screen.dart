@@ -319,9 +319,10 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
             ),
           ),
           if (_loading)
-            const SliverFillRemaining(
-              child: Center(
-                child: CircularProgressIndicator(color: AppColors.primaryLight),
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (_, __) => const SkeletonCard(),
+                childCount: 6,
               ),
             )
           else if (_visibles.isEmpty)

@@ -187,6 +187,79 @@ class AppTheme {
       ];
 }
 
+/// Skeleton de carga con pulso suave (shimmer) — estados de carga elegantes.
+class Skeleton extends StatefulWidget {
+  final double? width;
+  final double height;
+  final double radius;
+
+  const Skeleton({super.key, this.width, this.height = 16, this.radius = 8});
+
+  @override
+  State<Skeleton> createState() => _SkeletonState();
+}
+
+class _SkeletonState extends State<Skeleton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => FadeTransition(
+        opacity: Tween(begin: 0.45, end: 1.0).animate(
+            CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut)),
+        child: Container(
+          width: widget.width,
+          height: widget.height,
+          decoration: BoxDecoration(
+            color: const Color(0xFFE4EAF1),
+            borderRadius: BorderRadius.circular(widget.radius),
+          ),
+        ),
+      );
+}
+
+/// Tarjeta skeleton estándar (avatar + líneas) para listas en carga.
+class SkeletonCard extends StatelessWidget {
+  const SkeletonCard({super.key});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [AppTheme.cardShadow],
+        ),
+        child: const Row(
+          children: [
+            Skeleton(width: 52, height: 52, radius: 26),
+            SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Skeleton(width: 160, height: 15),
+                  SizedBox(height: 8),
+                  Skeleton(width: 100, height: 12),
+                ],
+              ),
+            ),
+            Skeleton(width: 48, height: 26, radius: 13),
+          ],
+        ),
+      );
+}
+
 /// Microinteracción táctil: escala suave al presionar (feedback inmediato).
 class PressableCard extends StatefulWidget {
   final Widget child;
