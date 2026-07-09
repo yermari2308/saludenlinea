@@ -1,21 +1,24 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // ── Paleta de confianza (marca) ─────────────────────────────────────────
-  static const primary = Color(0xFF0B2545);      // azul profundo: autoridad
-  static const primaryLight = Color(0xFF1557B0);
-  static const accent = Color(0xFF00C896);
-  static const accentDark = Color(0xFF00A87E);
-  // Fondo azul-grisáceo muy claro: limpieza clínica, menos fatiga visual
-  static const background = Color(0xFFF6F8FB);
+  // ── Identidad médica premium ────────────────────────────────────────────
+  // Azul petróleo: profundidad y confianza (evita el azul hospital típico)
+  static const primary = Color(0xFF0D3B4F);
+  // Azul eléctrico: tecnología y rapidez
+  static const primaryLight = Color(0xFF2563EB);
+  // Turquesa: medicina moderna
+  static const accent = Color(0xFF14B8A6);
+  static const accentDark = Color(0xFF0D9488);
+  // Blanco casi puro con un respiro de gris frío
+  static const background = Color(0xFFF8FAFC);
   static const surface = Colors.white;
-  static const textPrimary = Color(0xFF0B2545);
+  static const textPrimary = Color(0xFF0F2A37);
   static const textSecondary = Color(0xFF5B6B7F);
   static const textHint = Color(0xFF94A3B8);
   static const error = Color(0xFFE53E3E);
   static const warning = Color(0xFFED8936);
-  static const success = Color(0xFF38A169);
-  static const cardBorder = Color(0xFFE8EDF4);
+  static const success = Color(0xFF16A34A);  // verde SOLO para estados positivos
+  static const cardBorder = Color(0xFFE9EEF4);
 
   // ── Acento de emergencia: cinabrio oscuro — urgencia profesional, no alarmista
   static const alert = Color(0xFFD9453A);
@@ -38,6 +41,14 @@ class AppTheme {
         scaffoldBackgroundColor: AppColors.background,
         useMaterial3: true,
         fontFamily: 'Roboto',
+        // Transiciones fluidas estilo Apple (deslizamiento con física suave)
+        pageTransitionsTheme: const PageTransitionsTheme(
+          builders: {
+            TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          },
+        ),
+        splashFactory: InkSparkle.splashFactory,
         // Legibilidad clínica: interlineado amplio y jerarquía por peso
         textTheme: const TextTheme(
           bodyLarge: TextStyle(height: 1.5, color: AppColors.textPrimary),
@@ -122,10 +133,25 @@ class AppTheme {
         ),
       );
 
+  // Degradado sutil petróleo → azul profundo (nunca saturado)
   static LinearGradient get primaryGradient => const LinearGradient(
-        colors: [AppColors.primary, AppColors.primaryLight],
+        colors: [AppColors.primary, Color(0xFF14557A)],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
+      );
+
+  // Tarjeta glass: translúcida, borde suave, flotante
+  static BoxDecoration glassCard({double radius = 20}) => BoxDecoration(
+        color: Colors.white.withOpacity(0.82),
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: Colors.white.withOpacity(0.65), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.06),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
       );
 
   static BoxDecoration get gradientBox => BoxDecoration(gradient: primaryGradient);
@@ -159,6 +185,37 @@ class AppTheme {
           offset: const Offset(0, 2),
         ),
       ];
+}
+
+/// Microinteracción táctil: escala suave al presionar (feedback inmediato).
+class PressableCard extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+
+  const PressableCard({super.key, required this.child, this.onTap});
+
+  @override
+  State<PressableCard> createState() => _PressableCardState();
+}
+
+class _PressableCardState extends State<PressableCard> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: widget.onTap,
+      child: AnimatedScale(
+        scale: _pressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOutCubic,
+        child: widget.child,
+      ),
+    );
+  }
 }
 
 // Shared status chip widget

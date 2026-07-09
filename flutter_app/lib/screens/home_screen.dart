@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../app_theme.dart';
 import '../services/api_service.dart';
+import 'dashboard_screen.dart';
 import 'doctors_screen.dart';
 import 'appointments_screen.dart';
-import 'pharmacy_screen.dart';
 import 'profile_screen.dart';
 import 'waiting_room_screen.dart';
 import 'legal_screen.dart';
@@ -20,12 +20,16 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   String _role = 'patient';
 
-  final List<Widget> _screens = const [
-    DoctorsScreen(),
-    AppointmentsScreen(),
-    PharmacyScreen(),
-    ProfileScreen(),
-  ];
+  List<Widget> get _screens => [
+        DashboardScreen(
+          onConsultarAhora: _onBotonRojo,
+          onVerMedicos: () => setState(() => _currentIndex = 1),
+          onVerCitas: () => setState(() => _currentIndex = 2),
+        ),
+        const DoctorsScreen(),
+        const AppointmentsScreen(),
+        const ProfileScreen(),
+      ];
 
   @override
   void initState() {
@@ -228,10 +232,10 @@ class _BottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = [
-      (Icons.search_rounded, 'Médicos'),
-      (Icons.calendar_month_rounded, 'Mis citas'),
-      (Icons.local_pharmacy_rounded, 'Farmacia'),
-      (Icons.person_rounded, 'Perfil'),
+      (Icons.home_outlined, 'Inicio'),
+      (Icons.search_outlined, 'Médicos'),
+      (Icons.calendar_month_outlined, 'Citas'),
+      (Icons.person_outline_rounded, 'Perfil'),
     ];
 
     return Container(
