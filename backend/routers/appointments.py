@@ -191,6 +191,19 @@ def estado_pago_cita(
     doctor = db.query(Doctor).filter(Doctor.id == cita.doctor_id).first()
     pago = db.query(Payment).filter(Payment.cita_id == cita.id).first()
 
+    # Si el pago ONVO sigue pendiente, verificar en vivo contra su API
+    if pago and pago.metodo == "onvo" and pago.estado != "exitoso" and pago.referencia_externa:
+        try:
+            from routers.payments import _onvo_get, ONVO_SECRET_KEY
+            if ONVO_SECRET_KEY:
+                session = _onvo_get(f"/checkout/sessions/{pago.referencia_externa}")
+                if session.get("paymentStatus") == "paid" or session.get("status") == "complete":
+                    pago.estado = "exitoso"
+                    pago.verificado_en = datetime.utcnow()
+                    db.commit()
+        except Exception:
+            pass  # si ONVO no responde, se mantiene el estado actual
+
     cubierta = bool(
         (pago and pago.estado == "exitoso")
         or (pago and pago.metodo == "urgente")

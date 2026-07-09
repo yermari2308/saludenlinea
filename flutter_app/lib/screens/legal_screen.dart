@@ -74,6 +74,38 @@ class _LegalScreenState extends State<LegalScreen> {
   }
 }
 
+class _DocChip extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+  const _DocChip({required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: AppColors.primaryLight.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.primaryLight.withOpacity(0.3)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.description_rounded,
+                  size: 13, color: AppColors.primaryLight),
+              const SizedBox(width: 5),
+              Text(label,
+                  style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primaryLight)),
+            ],
+          ),
+        ),
+      );
+}
+
 /// Pantalla de consentimiento informado con botón de aceptación.
 /// Retorna `true` vía Navigator.pop si el paciente aceptó.
 class ConsentScreen extends StatefulWidget {
@@ -175,12 +207,39 @@ class _ConsentScreenState extends State<ConsentScreen> {
                   child: SingleChildScrollView(
                     controller: _scrollCtrl,
                     padding: const EdgeInsets.all(20),
-                    child: Text(
-                      _texto,
-                      style: const TextStyle(
-                          fontSize: 13.5,
-                          height: 1.65,
-                          color: AppColors.textPrimary),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            _DocChip(
+                              label: 'Términos y Condiciones',
+                              onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) =>
+                                          const LegalScreen(doc: 'terminos'))),
+                            ),
+                            const SizedBox(width: 8),
+                            _DocChip(
+                              label: 'Privacidad',
+                              onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) =>
+                                          const LegalScreen(doc: 'privacidad'))),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          _texto,
+                          style: const TextStyle(
+                              fontSize: 13.5,
+                              height: 1.65,
+                              color: AppColors.textPrimary),
+                        ),
+                      ],
                     ),
                   ),
                 ),

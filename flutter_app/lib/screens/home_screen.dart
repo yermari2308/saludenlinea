@@ -31,11 +31,36 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadRole();
+    // Primer inicio de sesión: mostrar consentimiento informado y políticas
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkConsent());
   }
 
   Future<void> _loadRole() async {
     final prefs = await SharedPreferences.getInstance();
     if (mounted) setState(() => _role = prefs.getString('role') ?? 'patient');
+  }
+
+  Future<void> _checkConsent() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if ((prefs.getString('role') ?? 'patient') == 'doctor') return;
+      final acepto = await ApiService.getConsentStatus();
+      if (acepto || !mounted) return;
+      final resultado = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(builder: (_) => const ConsentScreen()),
+      );
+      if (resultado != true && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text(
+              'Podés explorar la app, pero para consultar con un médico '
+              'necesitás aceptar el consentimiento informado.'),
+          duration: const Duration(seconds: 5),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
+      }
+    } catch (_) {}
   }
 
   Future<void> _onBotonRojo() async {

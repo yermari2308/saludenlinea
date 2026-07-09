@@ -441,7 +441,8 @@ def onvo_success(cita_id: int, db: Session = Depends(get_db)):
 
     if pago.estado != "exitoso" and ONVO_SECRET_KEY:
         session = _onvo_get(f"/checkout/sessions/{pago.referencia_externa}")
-        if session.get("status") == "complete":
+        # ONVO marca el pago en paymentStatus ("paid"); status puede quedar "open"
+        if session.get("paymentStatus") == "paid" or session.get("status") == "complete":
             pago.estado = "exitoso"
             pago.verificado_en = datetime.utcnow()
             db.commit()

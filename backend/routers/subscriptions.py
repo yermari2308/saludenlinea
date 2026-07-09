@@ -190,7 +190,8 @@ def onvo_sub_success(paciente_id: int, plan: str, db: Session = Depends(get_db))
     if ONVO_SECRET_KEY:
         from routers.payments import _onvo_get
         session = _onvo_get(f"/checkout/sessions/{pendiente.stripe_subscription_id}")
-        if session.get("status") == "complete":
+        # ONVO marca el pago en paymentStatus ("paid"); status puede quedar "open"
+        if session.get("paymentStatus") == "paid" or session.get("status") == "complete":
             pendiente.estado = "cancelado"  # cerrar el intento; _activar_plan crea/renueva el activo
             db.commit()
             _activar_plan(paciente_id, plan, db)
