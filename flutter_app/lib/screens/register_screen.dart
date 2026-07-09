@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../app_theme.dart';
 import '../services/api_service.dart';
 import 'home_screen.dart';
 
@@ -97,17 +98,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     v == null || v.length < 6 ? 'Mínimo 6 caracteres' : null,
               ),
               const SizedBox(height: 28),
-              ElevatedButton(
-                onPressed: _loading ? null : _register,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1976D2),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: _loading ? null : _register,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryLight,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: _loading
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2.5))
+                      : const Text('Registrarme',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w700)),
                 ),
-                child: _loading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Registrarme', style: TextStyle(fontSize: 16)),
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                'Al registrarte aceptás los Términos y Condiciones y la Política '
+                'de Privacidad de SaludEnLínea.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 11.5, color: AppColors.textHint, height: 1.4),
               ),
             ],
           ),

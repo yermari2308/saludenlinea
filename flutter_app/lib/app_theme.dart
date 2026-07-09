@@ -1,19 +1,30 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  static const primary = Color(0xFF0B2545);
+  // ── Paleta de confianza (marca) ─────────────────────────────────────────
+  static const primary = Color(0xFF0B2545);      // azul profundo: autoridad
   static const primaryLight = Color(0xFF1557B0);
   static const accent = Color(0xFF00C896);
   static const accentDark = Color(0xFF00A87E);
-  static const background = Color(0xFFF0F5FF);
+  // Fondo azul-grisáceo muy claro: limpieza clínica, menos fatiga visual
+  static const background = Color(0xFFF6F8FB);
   static const surface = Colors.white;
   static const textPrimary = Color(0xFF0B2545);
-  static const textSecondary = Color(0xFF64748B);
-  static const textHint = Color(0xFFADB5BD);
+  static const textSecondary = Color(0xFF5B6B7F);
+  static const textHint = Color(0xFF94A3B8);
   static const error = Color(0xFFE53E3E);
   static const warning = Color(0xFFED8936);
   static const success = Color(0xFF38A169);
-  static const cardBorder = Color(0xFFE8EDF8);
+  static const cardBorder = Color(0xFFE8EDF4);
+
+  // ── Acento de emergencia: rojo brillante pero desaturado (alerta, no agresión)
+  static const alert = Color(0xFFEB5757);
+  static const alertDark = Color(0xFFD64545);
+
+  // ── Semáforo semántico (HRA / estados clínicos) — distinto de la marca ──
+  static const semGreen = Color(0xFF3BA55D);   // salud / seguro
+  static const semYellow = Color(0xFFF2B01E);  // precaución / revisión
+  static const semRed = Color(0xFFE8590C);     // atención necesaria
 }
 
 class AppTheme {
@@ -27,6 +38,18 @@ class AppTheme {
         scaffoldBackgroundColor: AppColors.background,
         useMaterial3: true,
         fontFamily: 'Roboto',
+        // Legibilidad clínica: interlineado amplio y jerarquía por peso
+        textTheme: const TextTheme(
+          bodyLarge: TextStyle(height: 1.5, color: AppColors.textPrimary),
+          bodyMedium: TextStyle(height: 1.5, color: AppColors.textPrimary),
+          bodySmall: TextStyle(height: 1.45, color: AppColors.textSecondary),
+          titleLarge: TextStyle(
+              fontWeight: FontWeight.w800, letterSpacing: -0.3,
+              color: AppColors.textPrimary),
+          titleMedium: TextStyle(
+              fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+          labelLarge: TextStyle(fontWeight: FontWeight.w600),
+        ),
         cardTheme: CardTheme(
           elevation: 0,
           color: AppColors.surface,
@@ -116,11 +139,26 @@ class AppTheme {
         shape: BoxShape.circle,
       );
 
+  // Sombra suave estilo Fluent: las tarjetas "flotan" sobre el fondo
   static BoxShadow get cardShadow => BoxShadow(
-        color: AppColors.primaryLight.withOpacity(0.08),
-        blurRadius: 16,
-        offset: const Offset(0, 4),
+        color: AppColors.primary.withOpacity(0.06),
+        blurRadius: 20,
+        offset: const Offset(0, 6),
       );
+
+  // Elevación mayor para elementos destacados (FAB, paneles principales)
+  static List<BoxShadow> get elevatedShadow => [
+        BoxShadow(
+          color: AppColors.primary.withOpacity(0.10),
+          blurRadius: 28,
+          offset: const Offset(0, 10),
+        ),
+        BoxShadow(
+          color: AppColors.primary.withOpacity(0.05),
+          blurRadius: 6,
+          offset: const Offset(0, 2),
+        ),
+      ];
 }
 
 // Shared status chip widget

@@ -179,20 +179,27 @@ class _BotonRojo extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 64,
-        height: 64,
+        width: 68,
+        height: 68,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: const LinearGradient(
-            colors: [Color(0xFFFF4444), Color(0xFFCC0000)],
+            colors: [AppColors.alert, AppColors.alertDark],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
+          // Anillo blanco sólido: destaca el botón sin tapar información
+          border: Border.all(color: Colors.white, width: 4),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFFE53E3E).withOpacity(0.45),
-              blurRadius: 18,
-              offset: const Offset(0, 6),
+              color: AppColors.alert.withOpacity(0.40),
+              blurRadius: 22,
+              offset: const Offset(0, 8),
+            ),
+            BoxShadow(
+              color: AppColors.primary.withOpacity(0.08),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
             ),
           ],
         ),

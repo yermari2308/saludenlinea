@@ -507,9 +507,10 @@ class _ScoreGlobal extends StatelessWidget {
   const _ScoreGlobal({required this.pct, required this.nivel, this.imc});
 
   Color get _color {
-    if (pct >= 75) return AppColors.accentDark;
-    if (pct >= 50) return const Color(0xFFF59E0B);
-    return AppColors.error;
+    // Semáforo semántico estandarizado (distinto de los colores de marca)
+    if (pct >= 75) return AppColors.semGreen;
+    if (pct >= 50) return AppColors.semYellow;
+    return AppColors.semRed;
   }
 
   String get _nivelLabel {
@@ -622,10 +623,11 @@ class _RecomendacionCard extends StatelessWidget {
   const _RecomendacionCard({required this.rec});
 
   Color get _color {
+    // Semáforo semántico estandarizado (distinto de los colores de marca)
     switch (rec['color']) {
-      case 'verde': return AppColors.accentDark;
-      case 'amarillo': return const Color(0xFFF59E0B);
-      default: return AppColors.error;
+      case 'verde': return AppColors.semGreen;
+      case 'amarillo': return AppColors.semYellow;
+      default: return AppColors.semRed;
     }
   }
 
@@ -728,7 +730,7 @@ class _AgendarCitaBtn extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFFFF4444), Color(0xFFCC0000)],
+              colors: [AppColors.alert, AppColors.alertDark],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
