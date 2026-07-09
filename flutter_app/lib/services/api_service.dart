@@ -126,6 +126,42 @@ class ApiService {
     return Doctor.fromJson(_parse(res));
   }
 
+  // ── Doctor: panel propio ──────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getDoctorProfile() async {
+    final res = await DohClient.get(
+      '$baseUrl/api/doctors/me/profile',
+      headers: await _headers(),
+    );
+    return _parse(res);
+  }
+
+  static Future<void> updateDoctorProfile(Map<String, dynamic> campos) async {
+    final res = await DohClient.put(
+      '$baseUrl/api/doctors/me/profile',
+      headers: await _headers(),
+      body: jsonEncode(campos),
+    );
+    _parse(res);
+  }
+
+  static Future<List<Map<String, dynamic>>> getDoctorPatients() async {
+    final res = await DohClient.get(
+      '$baseUrl/api/doctors/me/patients',
+      headers: await _headers(),
+    );
+    final data = _parse(res) as List;
+    return data.cast<Map<String, dynamic>>();
+  }
+
+  static Future<Map<String, dynamic>> getDoctorIngresos() async {
+    final res = await DohClient.get(
+      '$baseUrl/api/doctors/me/ingresos',
+      headers: await _headers(),
+    );
+    return _parse(res);
+  }
+
   // ── Appointments ──────────────────────────────────────────────────────────
 
   static Future<Appointment> createAppointment({

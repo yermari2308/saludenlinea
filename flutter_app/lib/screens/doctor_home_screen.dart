@@ -10,7 +10,12 @@ import 'consultation_screen.dart';
 import 'chat_screen.dart';
 import 'login_screen.dart';
 import 'waiting_room_screen.dart';
+import 'doctor_patients_screen.dart';
+import 'doctor_earnings_screen.dart';
+import 'doctor_profile_screen.dart';
 
+/// Shell del panel médico con 4 pestañas:
+/// Inicio (citas + urgencias) · Pacientes · Ingresos · Perfil
 class DoctorHomeScreen extends StatefulWidget {
   const DoctorHomeScreen({super.key});
 
@@ -19,6 +24,130 @@ class DoctorHomeScreen extends StatefulWidget {
 }
 
 class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
+  int _index = 0;
+
+  final List<Widget> _tabs = const [
+    _DoctorInicioTab(),
+    DoctorPatientsScreen(),
+    DoctorEarningsScreen(),
+    DoctorProfileScreen(),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: IndexedStack(index: _index, children: _tabs),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: const Border(top: BorderSide(color: AppColors.cardBorder)),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withOpacity(0.06),
+              blurRadius: 20,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Row(
+              children: [
+                _DocNavItem(
+                  icon: Icons.home_rounded,
+                  label: 'Inicio',
+                  selected: _index == 0,
+                  onTap: () => setState(() => _index = 0),
+                ),
+                _DocNavItem(
+                  icon: Icons.groups_rounded,
+                  label: 'Pacientes',
+                  selected: _index == 1,
+                  onTap: () => setState(() => _index = 1),
+                ),
+                _DocNavItem(
+                  icon: Icons.payments_rounded,
+                  label: 'Ingresos',
+                  selected: _index == 2,
+                  onTap: () => setState(() => _index = 2),
+                ),
+                _DocNavItem(
+                  icon: Icons.person_rounded,
+                  label: 'Perfil',
+                  selected: _index == 3,
+                  onTap: () => setState(() => _index = 3),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DocNavItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _DocNavItem({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: selected
+                ? AppColors.primaryLight.withOpacity(0.1)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon,
+                  size: 24,
+                  color:
+                      selected ? AppColors.primaryLight : AppColors.textHint),
+              const SizedBox(height: 3),
+              Text(label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+                    color:
+                        selected ? AppColors.primaryLight : AppColors.textHint,
+                  )),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Pestaña Inicio (citas + urgencias) ────────────────────────────────────────
+
+class _DoctorInicioTab extends StatefulWidget {
+  const _DoctorInicioTab();
+
+  @override
+  State<_DoctorInicioTab> createState() => _DoctorInicioTabState();
+}
+
+class _DoctorInicioTabState extends State<_DoctorInicioTab> {
   late Future<List<Appointment>> _citasFuture;
   String _nombreDoctor = '';
   bool _disponibleUrgente = false;
