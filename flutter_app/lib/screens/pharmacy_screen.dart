@@ -16,6 +16,25 @@ class _PharmacyScreenState extends State<PharmacyScreen> {
   bool _loading = true;
   String? _categoria;
   int _cartCount = 0;
+  String _query = '';
+  final _searchCtrl = TextEditingController();
+
+  /// Filtrado local instantáneo por nombre o descripción
+  List<Map<String, dynamic>> get _visibles {
+    if (_query.isEmpty) return _productos;
+    final q = _query.toLowerCase();
+    return _productos
+        .where((p) =>
+            (p['nombre'] as String? ?? '').toLowerCase().contains(q) ||
+            (p['descripcion'] as String? ?? '').toLowerCase().contains(q))
+        .toList();
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
 
   static const _categorias = [
     (null, 'Todo', Icons.grid_view_rounded),
@@ -127,6 +146,52 @@ class _PharmacyScreenState extends State<PharmacyScreen> {
       ),
       body: Column(
         children: [
+          // ── Buscador de productos ──────────────────────────────────────────
+          Container(
+            color: AppColors.primary,
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: Container(
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.10),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: _searchCtrl,
+                style:
+                    const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: 'Buscar medicamento o producto…',
+                  hintStyle:
+                      const TextStyle(color: AppColors.textHint, fontSize: 14),
+                  prefixIcon: const Icon(Icons.search_rounded,
+                      color: AppColors.primaryLight, size: 22),
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  suffixIcon: _query.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.close_rounded,
+                              color: AppColors.textHint, size: 18),
+                          onPressed: () {
+                            _searchCtrl.clear();
+                            setState(() => _query = '');
+                          },
+                        )
+                      : null,
+                ),
+                onChanged: (v) => setState(() => _query = v.trim()),
+              ),
+            ),
+          ),
           // ── Categorías ─────────────────────────────────────────────────────
           Container(
             color: AppColors.primary,
@@ -179,19 +244,19 @@ class _PharmacyScreenState extends State<PharmacyScreen> {
             child: _loading
                 ? const Center(
                     child: CircularProgressIndicator(color: AppColors.primaryLight))
-                : _productos.isEmpty
+                : _visibles.isEmpty
                     ? _buildEmpty()
                     : RefreshIndicator(
                         onRefresh: _load,
                         child: ListView.separated(
                           padding: const EdgeInsets.all(16),
-                          itemCount: _productos.length + 1,
+                          itemCount: _visibles.length + 1,
                           separatorBuilder: (_, __) => const SizedBox(height: 10),
                           itemBuilder: (_, i) {
                             if (i == 0) return const _AvisoLegalFarmacia();
                             return _ProductCard(
-                              producto: _productos[i - 1],
-                              onAdd: () => _agregar(_productos[i - 1]),
+                              producto: _visibles[i - 1],
+                              onAdd: () => _agregar(_visibles[i - 1]),
                             );
                           },
                         ),

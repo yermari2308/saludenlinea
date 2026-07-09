@@ -208,105 +208,77 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 160,
             pinned: true,
             backgroundColor: AppColors.primary,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: AppTheme.gradientBox,
-                child: Stack(
-                  children: [
-                    Positioned(
-                      right: -30,
-                      top: -30,
-                      child: Container(
-                        width: 160,
-                        height: 160,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withOpacity(0.05),
-                        ),
-                      ),
-                    ),
-                    SafeArea(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('SaludEnLínea',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: -0.3,
-                                    )),
-                                IconButton(
-                                  icon: const Icon(Icons.refresh_rounded,
-                                      color: Colors.white70, size: 22),
-                                  onPressed: () => _load(_filtro),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text('Encuentra tu especialista',
-                                style: TextStyle(
-                                    color: Colors.white.withOpacity(0.65), fontSize: 13)),
-                            const SizedBox(height: 14),
-                            // Search bar
-                            Container(
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.white.withOpacity(0.2)),
-                              ),
-                              child: TextField(
-                                controller: _searchCtrl,
-                                style: const TextStyle(color: Colors.white, fontSize: 14),
-                                decoration: InputDecoration(
-                                  hintText: 'Médico, especialidad o síntoma…',
-                                  hintStyle: TextStyle(
-                                      color: Colors.white.withOpacity(0.5), fontSize: 14),
-                                  prefixIcon: const Icon(Icons.search_rounded,
-                                      color: Colors.white60, size: 20),
-                                  border: InputBorder.none,
-                                  enabledBorder: InputBorder.none,
-                                  focusedBorder: InputBorder.none,
-                                  contentPadding:
-                                      const EdgeInsets.symmetric(vertical: 12),
-                                  suffixIcon: _query.isNotEmpty
-                                      ? IconButton(
-                                          icon: const Icon(Icons.close_rounded,
-                                              color: Colors.white60, size: 18),
-                                          onPressed: () {
-                                            _searchCtrl.clear();
-                                            setState(() => _query = '');
-                                          },
-                                        )
-                                      : null,
-                                ),
-                                // Resultados instantáneos mientras escribe
-                                onChanged: (v) => setState(() => _query = v.trim()),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+            automaticallyImplyLeading: false,
+            title: const Text('Encuentra tu especialista',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.3,
+                )),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.refresh_rounded,
+                    color: Colors.white70, size: 22),
+                onPressed: () => _load(_filtro),
               ),
-            ),
+            ],
+            // Buscador + chips SIEMPRE visibles (zona fija del header)
             bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(48),
-              child: Container(
-                color: AppColors.primary,
-                height: 48,
-                child: ListView(
+              preferredSize: const Size.fromHeight(104),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                    child: Container(
+                      height: 46,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.10),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        controller: _searchCtrl,
+                        style: const TextStyle(
+                            color: AppColors.textPrimary, fontSize: 14),
+                        decoration: InputDecoration(
+                          hintText: 'Médico, especialidad o síntoma…',
+                          hintStyle: const TextStyle(
+                              color: AppColors.textHint, fontSize: 14),
+                          prefixIcon: const Icon(Icons.search_rounded,
+                              color: AppColors.primaryLight, size: 22),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 13),
+                          suffixIcon: _query.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.close_rounded,
+                                      color: AppColors.textHint, size: 18),
+                                  onPressed: () {
+                                    _searchCtrl.clear();
+                                    setState(() => _query = '');
+                                  },
+                                )
+                              : null,
+                        ),
+                        // Resultados instantáneos mientras escribe
+                        onChanged: (v) => setState(() => _query = v.trim()),
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    height: 46,
+                    child: ListView(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   children: [
@@ -340,7 +312,9 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                       onTap: _verMasEspecialidades,
                     ),
                   ],
-                ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

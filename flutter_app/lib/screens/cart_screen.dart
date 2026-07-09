@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import '../app_theme.dart';
 import '../services/api_service.dart';
 
@@ -17,6 +18,8 @@ class _CartScreenState extends State<CartScreen> {
 
   final _direccionCtrl = TextEditingController();
   String _metodoPago = 'sinpe';
+  Position? _ubicacion;
+  bool _obteniendoGps = false;
 
   @override
   void initState() {
@@ -60,11 +63,53 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
+  Future<void> _usarMiUbicacion() async {
+    setState(() => _obteniendoGps = true);
+    try {
+      // Verificar que el GPS esté activado
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        _snack('Activá la ubicación (GPS) de tu teléfono e intentá de nuevo');
+        return;
+      }
+      // Solicitar permiso de ubicación
+      var permiso = await Geolocator.checkPermission();
+      if (permiso == LocationPermission.denied) {
+        permiso = await Geolocator.requestPermission();
+      }
+      if (permiso == LocationPermission.denied ||
+          permiso == LocationPermission.deniedForever) {
+        _snack('Sin permiso de ubicación. Podés escribir la dirección '
+            'manualmente o activarlo en Ajustes.');
+        return;
+      }
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      if (!mounted) return;
+      setState(() => _ubicacion = pos);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text('Ubicación adjuntada al pedido ✓'),
+        backgroundColor: AppColors.success,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ));
+    } catch (e) {
+      if (mounted) _snack('No se pudo obtener la ubicación: $e');
+    } finally {
+      if (mounted) setState(() => _obteniendoGps = false);
+    }
+  }
+
   Future<void> _checkout() async {
-    final direccion = _direccionCtrl.text.trim();
+    var direccion = _direccionCtrl.text.trim();
     if (direccion.length < 10) {
       _snack('Ingresa una dirección de entrega completa');
       return;
+    }
+    // Adjuntar coordenadas GPS para que el repartidor llegue exacto
+    if (_ubicacion != null) {
+      direccion +=
+          '\n📍 GPS: https://maps.google.com/?q=${_ubicacion!.latitude},${_ubicacion!.longitude}';
     }
     setState(() => _procesando = true);
     try {
@@ -210,6 +255,43 @@ class _CartScreenState extends State<CartScreen> {
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
               ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // GPS: el repartidor llega al punto exacto
+          GestureDetector(
+            onTap: _obteniendoGps ? null : _usarMiUbicacion,
+            child: Row(
+              children: [
+                _obteniendoGps
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: AppColors.primaryLight))
+                    : Icon(
+                        _ubicacion != null
+                            ? Icons.check_circle_rounded
+                            : Icons.my_location_rounded,
+                        size: 18,
+                        color: _ubicacion != null
+                            ? AppColors.success
+                            : AppColors.primaryLight,
+                      ),
+                const SizedBox(width: 8),
+                Text(
+                  _ubicacion != null
+                      ? 'Ubicación GPS adjuntada al pedido'
+                      : 'Usar mi ubicación actual',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: _ubicacion != null
+                        ? AppColors.success
+                        : AppColors.primaryLight,
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 12),
