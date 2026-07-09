@@ -313,28 +313,11 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
               ),
             )
           else ...[
-            // Prioridad: el motor de búsqueda de médicos primero
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(0, 12, 0, 8),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (_, i) => DoctorCard(
-                    doctor: _doctors[i],
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => DoctorDetailScreen(doctor: _doctors[i])),
-                    ),
-                  ),
-                  childCount: _doctors.length,
-                ),
-              ),
-            ),
-            // ── Convenios: carrusel inferior (Fase 7) ───────────────────────
+            // ── Convenios: espacio publicitario siempre visible (arriba) ────
             if (_convenios.isNotEmpty)
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 0, 24),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 0, 0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -360,6 +343,22 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                   ),
                 ),
               ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(0, 8, 0, 24),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (_, i) => DoctorCard(
+                    doctor: _doctors[i],
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => DoctorDetailScreen(doctor: _doctors[i])),
+                    ),
+                  ),
+                  childCount: _doctors.length,
+                ),
+              ),
+            ),
           ],
         ],
       ),
