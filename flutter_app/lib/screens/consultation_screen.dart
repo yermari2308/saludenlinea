@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../app_theme.dart';
 import '../services/api_service.dart';
+import 'chat_screen.dart';
 
 class ConsultationScreen extends StatefulWidget {
   final int appointmentId;
@@ -39,6 +40,23 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
         setState(() { _error = msg; _loading = false; });
       }
     }
+  }
+
+  Future<void> _abrirChat() async {
+    final info = await ApiService.getUserInfo();
+    if (!mounted) return;
+    final esDoctor = (info['role'] ?? '') == 'doctor';
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChatScreen(
+          citaId: widget.appointmentId,
+          remitente: esDoctor ? 'doctor' : 'paciente',
+          remitenteId: info['id'] ?? 0,
+          nombreOtro: esDoctor ? 'Paciente' : 'Médico',
+        ),
+      ),
+    );
   }
 
   Future<void> _abrirVideollamada() async {
@@ -263,7 +281,25 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
+          // Chat integrado: coordinar sin entrar a la videollamada
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+              label: const Text('Chat de la consulta'),
+              onPressed: _abrirChat,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.primaryLight,
+                side: BorderSide(
+                    color: AppColors.primaryLight.withOpacity(0.4)),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Volver a mis citas',

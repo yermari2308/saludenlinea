@@ -16,7 +16,73 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
   List<Doctor> _doctors = [];
   bool _loading = true;
   String? _filtro;
+  String _query = '';
   final _searchCtrl = TextEditingController();
+
+  // Búsqueda por síntoma → especialidad sugerida
+  static const _sintomas = {
+    'fiebre': 'Medicina General',
+    'gripe': 'Medicina General',
+    'tos': 'Medicina General',
+    'dolor de cabeza': 'Medicina General',
+    'migraña': 'Medicina General',
+    'piel': 'Dermatología',
+    'acné': 'Dermatología',
+    'manchas': 'Dermatología',
+    'ansiedad': 'Psicología',
+    'estrés': 'Psicología',
+    'depresión': 'Psicología',
+    'insomnio': 'Psiquiatría',
+    'corazón': 'Cardiología',
+    'presión': 'Cardiología',
+    'palpitaciones': 'Cardiología',
+    'niño': 'Pediatría',
+    'bebé': 'Pediatría',
+    'embarazo': 'Ginecología',
+    'menstruación': 'Ginecología',
+    'tiroides': 'Endocrinología',
+    'diabetes': 'Endocrinología',
+    'oído': 'Otorrino',
+    'garganta': 'Otorrino',
+    'nariz': 'Otorrino',
+    'dieta': 'Nutrición',
+    'peso': 'Nutrición',
+    'alimentación': 'Nutrición',
+  };
+
+  /// Filtrado local instantáneo por nombre o especialidad
+  List<Doctor> get _visibles {
+    if (_query.isEmpty) return _doctors;
+    final q = _query.toLowerCase();
+    return _doctors
+        .where((d) =>
+            d.nombre.toLowerCase().contains(q) ||
+            d.especialidad.toLowerCase().contains(q))
+        .toList();
+  }
+
+  /// Sugerencias de autocompletado: especialidades + síntomas
+  List<(String, String)> get _sugerencias {
+    if (_query.length < 2) return [];
+    final q = _query.toLowerCase();
+    final result = <(String, String)>[];
+    for (final esp in _especialidades) {
+      if (esp != 'Todas' && esp.toLowerCase().contains(q)) {
+        result.add((esp, 'Especialidad'));
+      }
+    }
+    for (final e in _sintomas.entries) {
+      if (e.key.contains(q)) {
+        result.add((e.value, 'Por síntoma: "${e.key}"'));
+      }
+    }
+    // sin duplicados, máximo 4
+    final vistos = <String>{};
+    return result
+        .where((s) => vistos.add('${s.$1}${s.$2}'))
+        .take(4)
+        .toList();
+  }
 
   final List<String> _especialidades = [
     'Todas',
@@ -202,7 +268,7 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                                 controller: _searchCtrl,
                                 style: const TextStyle(color: Colors.white, fontSize: 14),
                                 decoration: InputDecoration(
-                                  hintText: 'Buscar por especialidad…',
+                                  hintText: 'Médico, especialidad o síntoma…',
                                   hintStyle: TextStyle(
                                       color: Colors.white.withOpacity(0.5), fontSize: 14),
                                   prefixIcon: const Icon(Icons.search_rounded,
@@ -212,18 +278,19 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                                   focusedBorder: InputBorder.none,
                                   contentPadding:
                                       const EdgeInsets.symmetric(vertical: 12),
-                                  suffixIcon: _searchCtrl.text.isNotEmpty
+                                  suffixIcon: _query.isNotEmpty
                                       ? IconButton(
                                           icon: const Icon(Icons.close_rounded,
                                               color: Colors.white60, size: 18),
                                           onPressed: () {
                                             _searchCtrl.clear();
-                                            _load();
+                                            setState(() => _query = '');
                                           },
                                         )
                                       : null,
                                 ),
-                                onSubmitted: (v) => _load(v.isEmpty ? null : v),
+                                // Resultados instantáneos mientras escribe
+                                onChanged: (v) => setState(() => _query = v.trim()),
                               ),
                             ),
                           ],
@@ -283,7 +350,7 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                 child: CircularProgressIndicator(color: AppColors.primaryLight),
               ),
             )
-          else if (_doctors.isEmpty)
+          else if (_visibles.isEmpty)
             SliverFillRemaining(
               child: Center(
                 child: Column(
@@ -313,8 +380,50 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
               ),
             )
           else ...[
+            // ── Autocompletado: sugerencias mientras escribe ────────────────
+            if (_sugerencias.isNotEmpty)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: Container(
+                    decoration: AppTheme.glassCard(radius: 16),
+                    child: Column(
+                      children: _sugerencias
+                          .map((s) => ListTile(
+                                dense: true,
+                                leading: Icon(
+                                  s.$2 == 'Especialidad'
+                                      ? Icons.medical_services_outlined
+                                      : Icons.healing_outlined,
+                                  size: 18,
+                                  color: AppColors.primaryLight,
+                                ),
+                                title: Text(s.$1,
+                                    style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.textPrimary)),
+                                subtitle: Text(s.$2,
+                                    style: const TextStyle(
+                                        fontSize: 11,
+                                        color: AppColors.textHint)),
+                                onTap: () {
+                                  _searchCtrl.clear();
+                                  setState(() {
+                                    _query = '';
+                                    _filtro = s.$1;
+                                  });
+                                  _load(s.$1);
+                                  FocusScope.of(context).unfocus();
+                                },
+                              ))
+                          .toList(),
+                    ),
+                  ),
+                ),
+              ),
             // ── Convenios: espacio publicitario siempre visible (arriba) ────
-            if (_convenios.isNotEmpty)
+            if (_convenios.isNotEmpty && _query.isEmpty)
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 0, 0),
@@ -348,14 +457,15 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (_, i) => DoctorCard(
-                    doctor: _doctors[i],
+                    doctor: _visibles[i],
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (_) => DoctorDetailScreen(doctor: _doctors[i])),
+                          builder: (_) =>
+                              DoctorDetailScreen(doctor: _visibles[i])),
                     ),
                   ),
-                  childCount: _doctors.length,
+                  childCount: _visibles.length,
                 ),
               ),
             ),

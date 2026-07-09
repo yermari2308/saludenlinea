@@ -269,9 +269,13 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                   color: AppColors.primaryLight,
                   onRefresh: _load,
                   child: ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                    padding: const EdgeInsets.fromLTRB(8, 16, 16, 24),
                     itemCount: _appointments.length,
-                    itemBuilder: (_, i) => _AppointmentCard(
+                    itemBuilder: (_, i) => _TimelineEntry(
+                      color: _estadoColor(_appointments[i].estado),
+                      isFirst: i == 0,
+                      isLast: i == _appointments.length - 1,
+                      child: _AppointmentCard(
                       apt: _appointments[i],
                       estadoColor: _estadoColor(_appointments[i].estado),
                       estadoLabel: _estadoLabel(_appointments[i].estado),
@@ -294,6 +298,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                       onOcultar: _appointments[i].estado != 'programada'
                           ? () => _ocultarCita(_appointments[i].id)
                           : null,
+                      ),
                     ),
                   ),
                 ),
@@ -601,6 +606,74 @@ class _AppointmentCardState extends State<_AppointmentCard> {
                 _expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
             duration: const Duration(milliseconds: 250),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Riel de línea de tiempo: punto de color por estado + línea vertical.
+class _TimelineEntry extends StatelessWidget {
+  final Color color;
+  final bool isFirst;
+  final bool isLast;
+  final Widget child;
+
+  const _TimelineEntry({
+    required this.color,
+    required this.isFirst,
+    required this.isLast,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: 26,
+            child: Column(
+              children: [
+                // Línea superior
+                Expanded(
+                  flex: 0,
+                  child: Container(
+                    width: 2,
+                    height: 22,
+                    color: isFirst
+                        ? Colors.transparent
+                        : AppColors.cardBorder,
+                  ),
+                ),
+                // Punto de estado
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withOpacity(0.35),
+                        blurRadius: 6,
+                      ),
+                    ],
+                  ),
+                ),
+                // Línea inferior
+                Expanded(
+                  child: Container(
+                    width: 2,
+                    color: isLast ? Colors.transparent : AppColors.cardBorder,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(child: child),
         ],
       ),
     );
