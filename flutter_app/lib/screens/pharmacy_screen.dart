@@ -307,8 +307,10 @@ class _ProductCard extends StatelessWidget {
                   style: const TextStyle(
                       fontSize: 12, color: AppColors.textSecondary, height: 1.3),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 10),
+                // Línea base fija: precio + badges a la izquierda, acción a la derecha
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Text(
                       '\$${precio.toStringAsFixed(2)}',
@@ -321,22 +323,25 @@ class _ProductCard extends StatelessWidget {
                     if (requiereReceta)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
+                            horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFEF3C7),
-                          borderRadius: BorderRadius.circular(6),
+                          // Naranja suave: distintivo sin alarmar
+                          color: const Color(0xFFFFF1E6),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                              color: const Color(0xFFC2410C).withOpacity(0.25)),
                         ),
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(Icons.description_rounded,
-                                size: 10, color: Color(0xFF92400E)),
-                            SizedBox(width: 3),
-                            Text('Receta',
+                                size: 11, color: Color(0xFFC2410C)),
+                            SizedBox(width: 4),
+                            Text('Requiere receta',
                                 style: TextStyle(
-                                    fontSize: 9,
+                                    fontSize: 10,
                                     fontWeight: FontWeight.w700,
-                                    color: Color(0xFF92400E))),
+                                    color: Color(0xFFC2410C))),
                           ],
                         ),
                       ),
@@ -348,22 +353,26 @@ class _ProductCard extends StatelessWidget {
                               color: AppColors.error,
                               fontWeight: FontWeight.w600)),
                     ],
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: stock > 0 ? onAdd : null,
+                      child: Container(
+                        // Objetivo táctil 44x44 (WCAG)
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: stock > 0
+                              ? AppColors.accentDark
+                              : AppColors.cardBorder,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.add_shopping_cart_rounded,
+                            color: Colors.white, size: 19),
+                      ),
+                    ),
                   ],
                 ),
               ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: stock > 0 ? onAdd : null,
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: stock > 0 ? AppColors.accentDark : AppColors.cardBorder,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.add_shopping_cart_rounded,
-                  color: Colors.white, size: 18),
             ),
           ),
         ],

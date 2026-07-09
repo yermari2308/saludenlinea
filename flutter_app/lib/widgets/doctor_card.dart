@@ -31,6 +31,7 @@ class DoctorCard extends StatelessWidget {
                 radius: 28,
               ),
               const SizedBox(width: 14),
+              // Nombre y especialidad (jerarquía por peso tipográfico)
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -44,53 +45,18 @@ class DoctorCard extends StatelessWidget {
                         color: AppColors.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 5),
                     Row(
                       children: [
-                        Container(
-                          width: 7,
-                          height: 7,
-                          decoration: const BoxDecoration(
-                            color: AppColors.accent,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
+                        const Icon(Icons.medical_services_outlined,
+                            size: 13, color: AppColors.textSecondary),
                         const SizedBox(width: 5),
-                        Text(
-                          doctor.especialidad,
-                          style: const TextStyle(
-                              color: AppColors.textSecondary, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const Icon(Icons.star_rounded, size: 15, color: Color(0xFFF59E0B)),
-                        const SizedBox(width: 3),
-                        Text(
-                          doctor.calificacion.toStringAsFixed(1),
-                          style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textSecondary),
-                        ),
-                        const Spacer(),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.accent.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                                color: AppColors.accent.withOpacity(0.3)),
-                          ),
+                        Flexible(
                           child: Text(
-                            '\$${doctor.tarifa.toStringAsFixed(0)}',
+                            doctor.especialidad,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                              color: AppColors.accentDark,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                            ),
+                                color: AppColors.textSecondary, fontSize: 12.5),
                           ),
                         ),
                       ],
@@ -98,9 +64,47 @@ class DoctorCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              const Icon(Icons.chevron_right_rounded,
-                  color: AppColors.textHint, size: 20),
+              const SizedBox(width: 10),
+              // Calificación y precio alineados a la derecha: escaneo rápido
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.star_rounded,
+                          size: 15, color: Color(0xFFF59E0B)),
+                      const SizedBox(width: 3),
+                      Text(
+                        doctor.calificacion.toStringAsFixed(1),
+                        style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.accent.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(20),
+                      border:
+                          Border.all(color: AppColors.accent.withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      '\$${doctor.tarifa.toStringAsFixed(0)}',
+                      style: const TextStyle(
+                        color: AppColors.accentDark,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),

@@ -48,6 +48,73 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
     } catch (_) {}
   }
 
+  void _verMasEspecialidades() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Todas las especialidades',
+                style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary)),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _especialidades
+                  .map((esp) => GestureDetector(
+                        onTap: () {
+                          Navigator.pop(context);
+                          setState(() =>
+                              _filtro = esp == 'Todas' ? null : esp);
+                          _load(esp == 'Todas' ? null : esp);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: (_filtro == esp ||
+                                    (esp == 'Todas' && _filtro == null))
+                                ? AppColors.primaryLight.withOpacity(0.1)
+                                : AppColors.background,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: (_filtro == esp ||
+                                      (esp == 'Todas' && _filtro == null))
+                                  ? AppColors.primaryLight
+                                  : AppColors.cardBorder,
+                            ),
+                          ),
+                          child: Text(
+                            esp,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: (_filtro == esp ||
+                                      (esp == 'Todas' && _filtro == null))
+                                  ? AppColors.primaryLight
+                                  : AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ))
+                  .toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _load([String? esp]) async {
     setState(() => _loading = true);
     try {
@@ -172,50 +239,40 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
               child: Container(
                 color: AppColors.primary,
                 height: 48,
-                child: ListView.builder(
+                child: ListView(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  itemCount: _especialidades.length,
-                  itemBuilder: (_, i) {
-                    final esp = _especialidades[i];
-                    final selected =
-                        _filtro == esp || (esp == 'Todas' && _filtro == null);
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() => _filtro = esp == 'Todas' ? null : esp);
-                          _load(esp == 'Todas' ? null : esp);
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: selected
-                                ? AppColors.accent
-                                : Colors.white.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: selected
-                                  ? AppColors.accent
-                                  : Colors.white.withOpacity(0.2),
-                            ),
+                  children: [
+                    // Chips principales (las 5 más comunes)
+                    ..._especialidades.take(5).map((esp) => Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: _FilterChip(
+                            label: esp,
+                            selected: _filtro == esp ||
+                                (esp == 'Todas' && _filtro == null),
+                            onTap: () {
+                              setState(() => _filtro = esp == 'Todas' ? null : esp);
+                              _load(esp == 'Todas' ? null : esp);
+                            },
                           ),
-                          child: Text(
-                            esp,
-                            style: TextStyle(
-                              color: selected ? Colors.white : Colors.white70,
-                              fontSize: 12,
-                              fontWeight: selected
-                                  ? FontWeight.w700
-                                  : FontWeight.w400,
-                            ),
-                          ),
+                        )),
+                    // Si el filtro activo no está entre las visibles, mostrarlo
+                    if (_filtro != null &&
+                        !_especialidades.take(5).contains(_filtro))
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: _FilterChip(
+                          label: _filtro!,
+                          selected: true,
+                          onTap: () {},
                         ),
                       ),
-                    );
-                  },
+                    _FilterChip(
+                      label: 'Más ▾',
+                      selected: false,
+                      onTap: _verMasEspecialidades,
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -256,11 +313,28 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
               ),
             )
           else ...[
-            // ── Convenios (Fase 7) ──────────────────────────────────────────
+            // Prioridad: el motor de búsqueda de médicos primero
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(0, 12, 0, 8),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (_, i) => DoctorCard(
+                    doctor: _doctors[i],
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => DoctorDetailScreen(doctor: _doctors[i])),
+                    ),
+                  ),
+                  childCount: _doctors.length,
+                ),
+              ),
+            ),
+            // ── Convenios: carrusel inferior (Fase 7) ───────────────────────
             if (_convenios.isNotEmpty)
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 0, 0),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 0, 24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -286,27 +360,54 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                   ),
                 ),
               ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(0, 12, 0, 24),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (_, i) => DoctorCard(
-                    doctor: _doctors[i],
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => DoctorDetailScreen(doctor: _doctors[i])),
-                    ),
-                  ),
-                  childCount: _doctors.length,
-                ),
-              ),
-            ),
           ],
         ],
       ),
     );
   }
+}
+
+// ── Chip de filtro de especialidad ────────────────────────────────────────────
+
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.accent : Colors.white.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: selected
+                  ? AppColors.accent
+                  : Colors.white.withOpacity(0.2),
+            ),
+          ),
+          child: Center(
+            widthFactor: 1,
+            child: Text(
+              label,
+              style: TextStyle(
+                color: selected ? Colors.white : Colors.white70,
+                fontSize: 12,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+              ),
+            ),
+          ),
+        ),
+      );
 }
 
 // ── Tarjeta de convenio ────────────────────────────────────────────────────────

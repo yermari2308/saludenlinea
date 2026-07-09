@@ -17,9 +17,9 @@ class AppColors {
   static const success = Color(0xFF38A169);
   static const cardBorder = Color(0xFFE8EDF4);
 
-  // ── Acento de emergencia: rojo brillante pero desaturado (alerta, no agresión)
-  static const alert = Color(0xFFEB5757);
-  static const alertDark = Color(0xFFD64545);
+  // ── Acento de emergencia: cinabrio oscuro — urgencia profesional, no alarmista
+  static const alert = Color(0xFFD9453A);
+  static const alertDark = Color(0xFFB23429);
 
   // ── Semáforo semántico (HRA / estados clínicos) — distinto de la marca ──
   static const semGreen = Color(0xFF3BA55D);   // salud / seguro

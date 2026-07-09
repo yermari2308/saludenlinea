@@ -10,6 +10,9 @@ import 'consultation_screen.dart';
 import 'chat_screen.dart';
 import 'payment_screen.dart';
 import 'legal_screen.dart';
+import 'hra_screen.dart';
+import 'medical_record_screen.dart';
+import 'pharmacy_screen.dart';
 
 class AppointmentsScreen extends StatefulWidget {
   const AppointmentsScreen({super.key});
@@ -297,10 +300,11 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     );
   }
 
-  Widget _emptyState() => Center(
+  Widget _emptyState() => SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            const SizedBox(height: 24),
             Container(
               padding: const EdgeInsets.all(28),
               decoration: BoxDecoration(
@@ -319,6 +323,46 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
             const SizedBox(height: 8),
             const Text('Busca un médico y agenda tu primera consulta',
                 style: TextStyle(color: AppColors.textSecondary)),
+            const SizedBox(height: 32),
+            // ── Próximos pasos ──────────────────────────────────────────────
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text('PRÓXIMOS PASOS',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textSecondary.withOpacity(0.9),
+                      letterSpacing: 0.6)),
+            ),
+            const SizedBox(height: 10),
+            _SugerenciaCard(
+              icon: Icons.assessment_rounded,
+              color: AppColors.accentDark,
+              titulo: 'Hacé tu evaluación de salud',
+              subtitulo: '6 preguntas y recibís tu semáforo de salud (HRA)',
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const HraScreen())),
+            ),
+            const SizedBox(height: 10),
+            _SugerenciaCard(
+              icon: Icons.folder_shared_rounded,
+              color: AppColors.primaryLight,
+              titulo: 'Completá tu expediente clínico',
+              subtitulo: 'Ayuda al médico a darte un mejor diagnóstico',
+              onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const MedicalRecordScreen())),
+            ),
+            const SizedBox(height: 10),
+            _SugerenciaCard(
+              icon: Icons.local_pharmacy_rounded,
+              color: const Color(0xFF7C3AED),
+              titulo: '¿Necesitás medicamentos?',
+              subtitulo: 'Pedilos en la farmacia con entrega a domicilio',
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const PharmacyScreen())),
+            ),
           ],
         ),
       );
@@ -561,6 +605,67 @@ class _AppointmentCardState extends State<_AppointmentCard> {
       ),
     );
   }
+}
+
+class _SugerenciaCard extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String titulo;
+  final String subtitulo;
+  final VoidCallback onTap;
+
+  const _SugerenciaCard({
+    required this.icon,
+    required this.color,
+    required this.titulo,
+    required this.subtitulo,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border(left: BorderSide(color: color, width: 3)),
+            boxShadow: [AppTheme.cardShadow],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(titulo,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                            color: AppColors.textPrimary)),
+                    const SizedBox(height: 3),
+                    Text(subtitulo,
+                        style: const TextStyle(
+                            fontSize: 12, color: AppColors.textSecondary)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward_ios_rounded,
+                  size: 14, color: AppColors.textHint),
+            ],
+          ),
+        ),
+      );
 }
 
 class _InfoRow extends StatelessWidget {

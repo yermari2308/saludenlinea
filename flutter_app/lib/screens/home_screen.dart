@@ -179,8 +179,8 @@ class _BotonRojo extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 68,
-        height: 68,
+        width: 64,
+        height: 64,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: const LinearGradient(
@@ -188,13 +188,15 @@ class _BotonRojo extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          // Anillo blanco sólido: destaca el botón sin tapar información
+          // Anillo blanco: integra el botón en la barra con elevación propia
           border: Border.all(color: Colors.white, width: 4),
           boxShadow: [
+            // Resplandor suave que indica interactividad
             BoxShadow(
-              color: AppColors.alert.withOpacity(0.40),
-              blurRadius: 22,
-              offset: const Offset(0, 8),
+              color: AppColors.alert.withOpacity(0.35),
+              blurRadius: 24,
+              spreadRadius: 1,
+              offset: const Offset(0, 6),
             ),
             BoxShadow(
               color: AppColors.primary.withOpacity(0.08),
@@ -203,22 +205,8 @@ class _BotonRojo extends StatelessWidget {
             ),
           ],
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Icon(Icons.medical_services_rounded, color: Colors.white, size: 24),
-            SizedBox(height: 2),
-            Text(
-              'URGENTE',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 7,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ],
-        ),
+        // Cruz blanca minimalista: urgencia médica sin alarmismo
+        child: const Icon(Icons.add_rounded, color: Colors.white, size: 34),
       ),
     );
   }
@@ -296,7 +284,22 @@ class _BottomBar extends StatelessWidget {
           selected: currentIndex == 1,
           onTap: () => onTap(1),
         ),
-        const SizedBox(width: 72), // espacio para el FAB centrado
+        // Slot del botón Urgente: etiqueta bajo el FAB flotante
+        const SizedBox(
+          width: 72,
+          child: Padding(
+            padding: EdgeInsets.only(top: 36),
+            child: Text(
+              'Urgente',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: AppColors.alert,
+              ),
+            ),
+          ),
+        ),
         _NavItem(
           icon: items[2].$1,
           label: items[2].$2,
