@@ -54,6 +54,14 @@ def join_queue(
 ):
     paciente_id = int(current["sub"])
 
+    # Consentimiento informado obligatorio antes de la primera atención
+    from routers.legal import paciente_acepto_telemedicina
+    if not paciente_acepto_telemedicina(paciente_id, db):
+        raise HTTPException(
+            status_code=451,
+            detail="Debes aceptar el consentimiento informado de telemedicina antes de solicitar atención.",
+        )
+
     # No permitir duplicados activos
     existing = db.query(ConsultQueue).filter(
         ConsultQueue.paciente_id == paciente_id,

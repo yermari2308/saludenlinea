@@ -174,6 +174,9 @@ def suscribir_onvo(
 @router.get("/onvo/success")
 def onvo_sub_success(paciente_id: int, plan: str, db: Session = Depends(get_db)):
     """ONVO redirige aquí tras pagar la suscripción. Verificación server-side."""
+    from fastapi.responses import HTMLResponse
+    from routers.payments import _pagina_retorno
+
     pendiente = db.query(Subscription).filter(
         Subscription.paciente_id == paciente_id,
         Subscription.plan == plan,
@@ -181,7 +184,8 @@ def onvo_sub_success(paciente_id: int, plan: str, db: Session = Depends(get_db))
     ).order_by(Subscription.creado_en.desc()).first()
 
     if not pendiente or not pendiente.stripe_subscription_id:
-        return {"mensaje": "No se encontró el intento de pago", "exito": False}
+        return HTMLResponse(_pagina_retorno(False, "Pago no encontrado",
+                                            "No encontramos el intento de pago. Volvé a la app e intentá de nuevo."))
 
     if ONVO_SECRET_KEY:
         from routers.payments import _onvo_get
@@ -190,9 +194,11 @@ def onvo_sub_success(paciente_id: int, plan: str, db: Session = Depends(get_db))
             pendiente.estado = "cancelado"  # cerrar el intento; _activar_plan crea/renueva el activo
             db.commit()
             _activar_plan(paciente_id, plan, db)
-            return {"mensaje": "¡Plan activado! Ya puedes agendar consultas. Volvé a la app.", "exito": True}
+            return HTMLResponse(_pagina_retorno(True, "¡Plan activado!",
+                                                "Tu suscripción está activa. Ya podés agendar consultas desde la app."))
 
-    return {"mensaje": "El pago aún no se confirma. Si ya pagaste, tu plan se activará en unos minutos.", "exito": False}
+    return HTMLResponse(_pagina_retorno(False, "Pago pendiente",
+                                        "El pago aún no se confirma. Si ya pagaste, tu plan se activará en unos minutos."))
 
 
 @router.post("/subscribe/stripe")

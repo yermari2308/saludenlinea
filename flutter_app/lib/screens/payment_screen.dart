@@ -24,10 +24,13 @@ class PaymentScreen extends StatefulWidget {
 
 enum _MetodoPago { sinpe, tarjeta }
 
-class _PaymentScreenState extends State<PaymentScreen> {
-  _MetodoPago _metodo = _MetodoPago.sinpe;
+class _PaymentScreenState extends State<PaymentScreen>
+    with WidgetsBindingObserver {
+  _MetodoPago _metodo = _MetodoPago.tarjeta;
   bool _loading = false;
   bool _enviado = false;
+  bool _pagoEnCurso = false; // se abrió el checkout externo
+  bool _verificando = false;
 
   // SINPE form
   final _refCtrl = TextEditingController();
@@ -39,14 +42,67 @@ class _PaymentScreenState extends State<PaymentScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadSinpeInfo();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _refCtrl.dispose();
     _telCtrl.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Al volver del navegador (checkout ONVO), verificar si el pago se completó
+    if (state == AppLifecycleState.resumed && _pagoEnCurso) {
+      _verificarPago();
+    }
+  }
+
+  Future<void> _verificarPago() async {
+    if (_verificando) return;
+    setState(() => _verificando = true);
+    try {
+      final info = await ApiService.getAppointmentPago(widget.appointmentId);
+      if (!mounted) return;
+      if (info['requiere_pago'] == false) {
+        _pagoEnCurso = false;
+        // Pago confirmado → volver con éxito
+        await showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Row(children: [
+              Icon(Icons.check_circle_rounded, color: AppColors.accentDark),
+              SizedBox(width: 8),
+              Text('¡Pago confirmado!',
+                  style: TextStyle(
+                      fontWeight: FontWeight.w800, fontSize: 18,
+                      color: AppColors.textPrimary)),
+            ]),
+            content: const Text(
+                'Tu cita quedó pagada. Ya podés entrar a la consulta.',
+                style: TextStyle(color: AppColors.textSecondary)),
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accentDark,
+                    foregroundColor: Colors.white),
+                child: const Text('Continuar'),
+              ),
+            ],
+          ),
+        );
+        if (mounted) Navigator.pop(context, true);
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _verificando = false);
+    }
   }
 
   Future<void> _loadSinpeInfo() async {
@@ -105,6 +161,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       final data = await ApiService.onvoCheckout(widget.appointmentId);
       final url = data['checkout_url'] as String?;
       if (url != null && await canLaunchUrl(Uri.parse(url))) {
+        _pagoEnCurso = true;
         await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
       } else {
         _snack('No se pudo abrir la página de pago');
@@ -407,6 +464,28 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 ),
               ),
             ),
+            if (_pagoEnCurso) ...[
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  icon: _verificando
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.refresh_rounded, size: 18),
+                  label: const Text('Ya pagué — verificar'),
+                  onPressed: _verificando ? null : _verificarPago,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF6366F1),
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ],
           ],
 
           const SizedBox(height: 16),

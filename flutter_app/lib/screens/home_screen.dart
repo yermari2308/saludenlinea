@@ -7,6 +7,7 @@ import 'appointments_screen.dart';
 import 'pharmacy_screen.dart';
 import 'profile_screen.dart';
 import 'waiting_room_screen.dart';
+import 'legal_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -38,6 +39,65 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _onBotonRojo() async {
+    // ── Aviso legal: no es un servicio de emergencias ─────────────────────
+    final continuar = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.emergency_rounded, color: Color(0xFFE53E3E)),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text('¿Es una emergencia?',
+                  style: TextStyle(
+                      fontWeight: FontWeight.w800, fontSize: 17,
+                      color: AppColors.textPrimary)),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Si tu vida está en peligro (dolor de pecho intenso, dificultad severa '
+          'para respirar, pérdida de conciencia, sangrado abundante), NO uses la app: '
+          'llamá al 9-1-1 de inmediato.\n\n'
+          'Este servicio es para atención médica urgente que NO amenaza la vida.',
+          style: TextStyle(color: AppColors.textSecondary, height: 1.5, fontSize: 13.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar',
+                style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE53E3E),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('No es emergencia, continuar'),
+          ),
+        ],
+      ),
+    );
+    if (continuar != true || !mounted) return;
+
+    // ── Consentimiento informado obligatorio ──────────────────────────────
+    try {
+      final acepto = await ApiService.getConsentStatus();
+      if (!acepto) {
+        if (!mounted) return;
+        final resultado = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(builder: (_) => const ConsentScreen()),
+        );
+        if (resultado != true) return;
+      }
+    } catch (_) {}
+    if (!mounted) return;
+
     try {
       final result = await ApiService.joinUrgentQueue();
       if (!mounted) return;

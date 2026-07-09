@@ -38,6 +38,7 @@ class Doctor(Base):
     activo = Column(Boolean, default=True)
     calificacion = Column(Float, default=5.0)
     disponible_urgente = Column(Boolean, default=False)
+    codigo_medico = Column(String(30), default="")  # código del Colegio de Médicos
     creado_en = Column(DateTime, default=datetime.utcnow)
 
     citas = relationship("Appointment", back_populates="doctor")
@@ -291,6 +292,20 @@ class PartnerBenefit(Base):
     logo_url = Column(String(500), default="")
     activo = Column(Boolean, default=True)
     creado_en = Column(DateTime, default=datetime.utcnow)
+
+
+class InformedConsent(Base):
+    """Consentimientos aceptados por el paciente (Ley 8968 + Reglamento Telesalud CMC)."""
+    __tablename__ = "informed_consents"
+
+    id = Column(Integer, primary_key=True, index=True)
+    paciente_id = Column(Integer, ForeignKey("patients.id"), nullable=False)
+    tipo = Column(String(30), nullable=False)          # telemedicina|terminos
+    version_texto = Column(String(20), nullable=False)  # ej: "1.0"
+    aceptado_en = Column(DateTime, default=datetime.utcnow)
+    ip = Column(String(45), default="")
+
+    paciente = relationship("Patient", foreign_keys=[paciente_id])
 
 
 class PasswordResetToken(Base):

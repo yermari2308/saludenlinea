@@ -19,6 +19,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
   final _credCtrl = TextEditingController();
   final _tarifaCtrl = TextEditingController();
   final _espCtrl = TextEditingController();
+  final _codigoCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -31,6 +32,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
     _credCtrl.dispose();
     _tarifaCtrl.dispose();
     _espCtrl.dispose();
+    _codigoCtrl.dispose();
     super.dispose();
   }
 
@@ -45,6 +47,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
         _tarifaCtrl.text =
             ((data['tarifa'] as num?)?.toDouble() ?? 15).toStringAsFixed(2);
         _espCtrl.text = data['especialidad'] as String? ?? '';
+        _codigoCtrl.text = data['codigo_medico'] as String? ?? '';
       });
     } catch (_) {
     } finally {
@@ -64,6 +67,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
         'especialidad': _espCtrl.text.trim(),
         'credenciales': _credCtrl.text.trim(),
         'tarifa': tarifa,
+        'codigo_medico': _codigoCtrl.text.trim(),
       });
       if (!mounted) return;
       _snack('Perfil actualizado correctamente');
@@ -162,6 +166,15 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                   const _Label('Especialidad'),
                   const SizedBox(height: 6),
                   _Input(ctrl: _espCtrl, hint: 'Ej: Medicina General'),
+                  const SizedBox(height: 16),
+                  const _Label('Código médico (Colegio de Médicos CR)'),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Aparece en tus recetas. Requerido para ejercer telemedicina en Costa Rica.',
+                    style: TextStyle(fontSize: 11, color: AppColors.textHint),
+                  ),
+                  const SizedBox(height: 8),
+                  _Input(ctrl: _codigoCtrl, hint: 'Ej: MED-12345'),
                   const SizedBox(height: 16),
                   // ── Competencias / credenciales ─────────────────────────
                   const _Label('Competencias y credenciales'),

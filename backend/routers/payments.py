@@ -184,14 +184,48 @@ async def mp_webhook(request: Request, db: Session = Depends(get_db)):
     return {"status": "ok"}
 
 
-@router.get("/resultado/{estado}")
+def _pagina_retorno(exito: bool, titulo: str, mensaje: str) -> str:
+    """Página HTML que se muestra al volver del checkout, con botón para reabrir la app."""
+    icono = "✅" if exito else ("⏳" if "confirma" in mensaje else "❌")
+    color = "#00C896" if exito else "#F59E0B"
+    return f"""<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{titulo} — SaludEnLínea</title>
+<style>
+ body {{ font-family:'Segoe UI',system-ui,sans-serif; background:#0B2545; color:#fff;
+        display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; }}
+ .box {{ text-align:center; padding:40px 28px; max-width:400px; }}
+ .ic {{ font-size:64px; }}
+ h1 {{ font-size:24px; margin:16px 0 8px; }}
+ p {{ color:rgba(255,255,255,.75); line-height:1.6; font-size:15px; }}
+ a.btn {{ display:inline-block; margin-top:28px; background:{color}; color:#06283d;
+        font-weight:700; padding:15px 36px; border-radius:12px; text-decoration:none; font-size:16px; }}
+ .peq {{ margin-top:14px; font-size:12px; color:rgba(255,255,255,.5); }}
+</style></head>
+<body><div class="box">
+ <div class="ic">{icono}</div>
+ <h1>{titulo}</h1>
+ <p>{mensaje}</p>
+ <a class="btn" href="saludenlinea://pago">Volver a SaludEnLínea</a>
+ <p class="peq">Si el botón no funciona, abrí la app manualmente — tu pago ya quedó registrado.</p>
+</div>
+<script>setTimeout(function(){{ window.location.href = "saludenlinea://pago"; }}, 1500);</script>
+</body></html>"""
+
+
+from fastapi.responses import HTMLResponse
+
+
+@router.get("/resultado/{estado}", response_class=HTMLResponse)
 def resultado_pago(estado: str):
-    mensajes = {
-        "success": "¡Pago exitoso! Tu cita ha sido confirmada.",
-        "failure": "El pago no se pudo completar. Intenta de nuevo.",
-        "pending": "Pago pendiente. Te notificaremos cuando se confirme.",
+    paginas = {
+        "success": (True, "¡Pago exitoso!", "Tu cita ha sido confirmada. Ya puedes volver a la app."),
+        "failure": (False, "Pago no completado", "El pago fue cancelado o rechazado. Puedes intentarlo de nuevo desde la app."),
+        "pending": (False, "Pago pendiente", "Tu pago está en proceso. Se confirmará en unos minutos."),
     }
-    return {"resultado": estado, "mensaje": mensajes.get(estado, "Estado desconocido")}
+    exito, titulo, msg = paginas.get(estado, (False, "Estado desconocido", "Volvé a la app para ver el estado de tu pago."))
+    return _pagina_retorno(exito, titulo, msg)
 
 
 # ── SINPE Móvil ───────────────────────────────────────────────────────────────
@@ -396,14 +430,14 @@ def onvo_checkout(
     return {"checkout_url": session.get("url"), "session_id": session.get("id")}
 
 
-@router.get("/onvo/success")
+@router.get("/onvo/success", response_class=HTMLResponse)
 def onvo_success(cita_id: int, db: Session = Depends(get_db)):
     """ONVO redirige aquí tras el pago. Verificamos el estado real contra su API."""
     pago = db.query(Payment).filter(
         Payment.cita_id == cita_id, Payment.metodo == "onvo",
     ).first()
     if not pago or not pago.referencia_externa:
-        return {"resultado": "failure", "mensaje": "Pago no encontrado"}
+        return _pagina_retorno(False, "Pago no encontrado", "No encontramos este pago. Volvé a la app e intentá de nuevo.")
 
     if pago.estado != "exitoso" and ONVO_SECRET_KEY:
         session = _onvo_get(f"/checkout/sessions/{pago.referencia_externa}")
@@ -414,8 +448,8 @@ def onvo_success(cita_id: int, db: Session = Depends(get_db)):
             logger.info("ONVO pago exitoso cita_id=%s session=%s", cita_id, pago.referencia_externa)
 
     if pago.estado == "exitoso":
-        return {"resultado": "success", "mensaje": "¡Pago exitoso! Tu cita ha sido confirmada. Ya puedes volver a la app."}
-    return {"resultado": "pending", "mensaje": "El pago aún no se confirma. Si ya pagaste, se reflejará en unos minutos."}
+        return _pagina_retorno(True, "¡Pago exitoso!", "Tu cita ha sido confirmada. Ya podés entrar a la consulta desde la app.")
+    return _pagina_retorno(False, "Pago pendiente", "El pago aún no se confirma. Si ya pagaste, se reflejará en unos minutos.")
 
 
 # ── Stripe ────────────────────────────────────────────────────────────────────

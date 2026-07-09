@@ -10,7 +10,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from database import engine
 from models import Base
-from routers import auth, doctors, appointments, patients, leads, admin, payments, google_auth, chat, password_reset, urgent, medical_record, hra, subscriptions, pharmacy, health_metrics, benefits
+from routers import auth, doctors, appointments, patients, leads, admin, payments, google_auth, chat, password_reset, urgent, medical_record, hra, subscriptions, pharmacy, health_metrics, benefits, legal
 
 load_dotenv()
 
@@ -46,6 +46,7 @@ def _run_migrations():
             "ALTER TABLE payments ADD COLUMN IF NOT EXISTS verificado_por INTEGER",
             "ALTER TABLE payments ADD COLUMN IF NOT EXISTS verificado_en TIMESTAMP",
             "ALTER TABLE appointments ADD COLUMN IF NOT EXISTS oculta_paciente BOOLEAN DEFAULT FALSE",
+            "ALTER TABLE doctors ADD COLUMN IF NOT EXISTS codigo_medico VARCHAR(30) DEFAULT ''",
         ]
         for sql in migrations:
             try:
@@ -142,6 +143,7 @@ app.include_router(subscriptions.router)
 app.include_router(pharmacy.router)
 app.include_router(health_metrics.router)
 app.include_router(benefits.router)
+app.include_router(legal.router)
 
 
 @app.get("/api")

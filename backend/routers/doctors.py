@@ -18,6 +18,7 @@ class DoctorProfileUpdate(BaseModel):
     tarifa: Optional[float] = Field(default=None, gt=0, le=1000)
     foto_url: Optional[str] = Field(default=None, max_length=500)
     horario_json: Optional[str] = Field(default=None, max_length=2000)
+    codigo_medico: Optional[str] = Field(default=None, max_length=30)
 
 
 # ── Perfil propio del médico (antes de /{doctor_id} para no chocar) ──────────
@@ -41,6 +42,7 @@ def mi_perfil_doctor(
         "calificacion": doc.calificacion,
         "horario_json": doc.horario_json,
         "disponible_urgente": doc.disponible_urgente,
+        "codigo_medico": doc.codigo_medico or "",
     }
 
 

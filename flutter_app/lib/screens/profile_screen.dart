@@ -7,6 +7,7 @@ import 'medical_record_screen.dart';
 import 'hra_screen.dart';
 import 'subscription_screen.dart';
 import 'wearables_screen.dart';
+import 'legal_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -37,6 +38,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (_) {
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _eliminarCuenta() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Eliminar cuenta',
+            style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.error)),
+        content: const Text(
+          'Esta acción es permanente: tus datos personales serán anonimizados y '
+          'no podrás volver a iniciar sesión.\n\n'
+          'Tus registros clínicos se conservan de forma anónima por el plazo que '
+          'exige la ley costarricense.\n\n¿Deseas continuar?',
+          style: TextStyle(color: AppColors.textSecondary, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.error, foregroundColor: Colors.white),
+            child: const Text('Eliminar definitivamente'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ApiService.deleteMyAccount();
+      if (!mounted) return;
+      Navigator.pushReplacement(
+          context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(e.toString()), backgroundColor: AppColors.error));
     }
   }
 
@@ -275,6 +317,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ],
                   ),
           ),
+          const SizedBox(height: 24),
+          _SectionLabel(label: 'Legal'),
+          const SizedBox(height: 10),
+          _LegalLink(
+            icon: Icons.description_rounded,
+            label: 'Términos y Condiciones',
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const LegalScreen(doc: 'terminos'))),
+          ),
+          const SizedBox(height: 8),
+          _LegalLink(
+            icon: Icons.privacy_tip_rounded,
+            label: 'Política de Privacidad',
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const LegalScreen(doc: 'privacidad'))),
+          ),
+          const SizedBox(height: 8),
+          _LegalLink(
+            icon: Icons.fact_check_rounded,
+            label: 'Consentimiento informado',
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const LegalScreen(doc: 'consentimiento'))),
+          ),
           const SizedBox(height: 32),
           SizedBox(
             width: double.infinity,
@@ -288,6 +353,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Center(
+            child: TextButton(
+              onPressed: _eliminarCuenta,
+              child: Text('Eliminar mi cuenta',
+                  style: TextStyle(
+                      color: AppColors.error.withOpacity(0.7), fontSize: 12)),
             ),
           ),
           const SizedBox(height: 16),
@@ -409,6 +483,42 @@ class _InfoTile extends StatelessWidget {
 }
 
 // ── Banner HRA ────────────────────────────────────────────────────────────────
+
+class _LegalLink extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _LegalLink({required this.icon, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [AppTheme.cardShadow],
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 18, color: AppColors.textHint),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(label,
+                    style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary)),
+              ),
+              const Icon(Icons.arrow_forward_ios_rounded,
+                  size: 13, color: AppColors.textHint),
+            ],
+          ),
+        ),
+      );
+}
 
 // ── Banner Wearables ──────────────────────────────────────────────────────────
 

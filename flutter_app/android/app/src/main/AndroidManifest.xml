@@ -33,6 +33,13 @@
             <intent-filter>
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE"/>
             </intent-filter>
+            <!-- Deep link: volver a la app tras el pago (saludenlinea://pago) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="saludenlinea"/>
+            </intent-filter>
         </activity>
         <!-- Health Connect: Android 14+ -->
         <activity-alias

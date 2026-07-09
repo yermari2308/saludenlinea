@@ -148,8 +148,14 @@ def get_or_create_session(
     if role == "doctor" and cita.doctor_id != uid:
         raise HTTPException(status_code=403, detail="No autorizado")
 
-    # ── El paciente debe haber pagado antes de entrar ─────────────────────────
+    # ── El paciente debe haber aceptado el consentimiento y pagado ────────────
     if role == "patient":
+        from routers.legal import paciente_acepto_telemedicina
+        if not paciente_acepto_telemedicina(uid, db):
+            raise HTTPException(
+                status_code=451,
+                detail="Debes aceptar el consentimiento informado de telemedicina antes de tu primera consulta.",
+            )
         _verificar_pago_o_suscripcion(cita, db)
 
     sesion = db.query(ConsultSession).filter(ConsultSession.cita_id == appointment_id).first()
@@ -223,6 +229,30 @@ def ocultar_cita(
     return {"message": "Cita ocultada de tu historial"}
 
 
+# Documentos que el Reglamento de Telesalud del CMC prohíbe emitir por teleconsulta
+_CERTIFICADOS_PROHIBIDOS = (
+    "certificado de defunción", "certificado de defuncion",
+    "dictamen de defunción", "dictamen de defuncion",
+    "licencia de conducir", "dictamen para licencia",
+    "portación de armas", "portacion de armas",
+)
+
+
+def _validar_certificados_prohibidos(*textos: str):
+    for texto in textos:
+        if not texto:
+            continue
+        bajo = texto.lower()
+        for frase in _CERTIFICADOS_PROHIBIDOS:
+            if frase in bajo:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Por teleconsulta no se pueden emitir certificados de defunción, "
+                           "dictámenes para licencia de conducir ni certificados de portación "
+                           "de armas (Reglamento de Telesalud, Colegio de Médicos CR).",
+                )
+
+
 @router.put("/consultation/{appointment_id}/notes")
 def update_notes(
     appointment_id: int,
@@ -236,6 +266,7 @@ def update_notes(
     ).first()
     if not cita:
         raise HTTPException(status_code=404, detail="Cita no encontrada")
+    _validar_certificados_prohibidos(data.notas_texto or "", data.receta_texto or "")
     if data.notas_texto is not None:
         cita.notas_texto = data.notas_texto
     if data.receta_texto is not None:
@@ -257,11 +288,14 @@ def get_receta(
     ).first()
     if not cita:
         raise HTTPException(status_code=404, detail="Cita no encontrada")
+    doctor = db.query(Doctor).filter(Doctor.id == cita.doctor_id).first()
     return {
         "appointment_id": appointment_id,
         "receta": cita.receta_texto,
         "notas": cita.notas_texto,
         "fecha": cita.fecha_hora,
+        "doctor_nombre": doctor.nombre if doctor else "",
+        "codigo_medico": (doctor.codigo_medico or "") if doctor else "",
     }
 
 

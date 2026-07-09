@@ -24,7 +24,11 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return bcrypt.checkpw(plain.encode(), hashed.encode())
+    try:
+        return bcrypt.checkpw(plain.encode(), hashed.encode())
+    except (ValueError, TypeError):
+        # Hash inválido (ej: cuenta eliminada/anonimizada) → login denegado
+        return False
 
 
 def create_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:

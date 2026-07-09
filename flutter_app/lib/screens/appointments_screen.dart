@@ -9,6 +9,7 @@ import '../services/api_service.dart';
 import 'consultation_screen.dart';
 import 'chat_screen.dart';
 import 'payment_screen.dart';
+import 'legal_screen.dart';
 
 class AppointmentsScreen extends StatefulWidget {
   const AppointmentsScreen({super.key});
@@ -72,6 +73,19 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     final esDoctor = (prefs['role'] ?? '') == 'doctor';
 
     if (!esDoctor) {
+      // Consentimiento informado obligatorio antes de la primera consulta
+      try {
+        final acepto = await ApiService.getConsentStatus();
+        if (!acepto) {
+          if (!mounted) return;
+          final resultado = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(builder: (_) => const ConsentScreen()),
+          );
+          if (resultado != true) return;
+        }
+      } catch (_) {}
+      if (!mounted) return;
       // Verificar pago antes de entrar (el backend también lo exige)
       try {
         final info = await ApiService.getAppointmentPago(apt.id);

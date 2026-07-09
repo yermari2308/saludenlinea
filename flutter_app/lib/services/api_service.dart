@@ -622,6 +622,43 @@ class ApiService {
     return data.cast<Map<String, dynamic>>();
   }
 
+  // ── Legal y consentimientos ───────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getLegalDoc(String doc) async {
+    final res = await DohClient.get(
+      '$baseUrl/api/legal/$doc',
+      headers: {'Content-Type': 'application/json'},
+    );
+    return _parse(res);
+  }
+
+  static Future<bool> getConsentStatus() async {
+    final res = await DohClient.get(
+      '$baseUrl/api/consents/status',
+      headers: await _headers(),
+    );
+    final data = _parse(res);
+    return data['telemedicina_aceptado'] == true;
+  }
+
+  static Future<void> acceptConsent(String tipo) async {
+    final res = await DohClient.post(
+      '$baseUrl/api/consents/accept',
+      headers: await _headers(),
+      body: jsonEncode({'tipo': tipo}),
+    );
+    _parse(res);
+  }
+
+  static Future<void> deleteMyAccount() async {
+    final res = await DohClient.delete(
+      '$baseUrl/api/patients/me',
+      headers: await _headers(),
+    );
+    _parse(res);
+    await logout();
+  }
+
   // ── Patient ───────────────────────────────────────────────────────────────
 
   static Future<Patient> getMyProfile() async {

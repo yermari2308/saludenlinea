@@ -185,12 +185,15 @@ class _PharmacyScreenState extends State<PharmacyScreen> {
                         onRefresh: _load,
                         child: ListView.separated(
                           padding: const EdgeInsets.all(16),
-                          itemCount: _productos.length,
+                          itemCount: _productos.length + 1,
                           separatorBuilder: (_, __) => const SizedBox(height: 10),
-                          itemBuilder: (_, i) => _ProductCard(
-                            producto: _productos[i],
-                            onAdd: () => _agregar(_productos[i]),
-                          ),
+                          itemBuilder: (_, i) {
+                            if (i == 0) return const _AvisoLegalFarmacia();
+                            return _ProductCard(
+                              producto: _productos[i - 1],
+                              onAdd: () => _agregar(_productos[i - 1]),
+                            );
+                          },
                         ),
                       ),
           ),
@@ -216,6 +219,37 @@ class _PharmacyScreenState extends State<PharmacyScreen> {
             const Text('No hay productos en esta categoría',
                 style: TextStyle(
                     fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+          ],
+        ),
+      );
+}
+
+class _AvisoLegalFarmacia extends StatelessWidget {
+  const _AvisoLegalFarmacia();
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEFF6FF),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFF2563EB).withOpacity(0.2)),
+        ),
+        child: const Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.verified_user_rounded,
+                size: 18, color: Color(0xFF2563EB)),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Los medicamentos son despachados por una farmacia aliada autorizada, '
+                'bajo supervisión de un regente farmacéutico. Los antibióticos y '
+                'psicotrópicos requieren Receta Digital del Ministerio de Salud.',
+                style: TextStyle(
+                    fontSize: 11.5, color: Color(0xFF1E40AF), height: 1.4),
+              ),
+            ),
           ],
         ),
       );
