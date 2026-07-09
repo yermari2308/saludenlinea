@@ -263,6 +263,36 @@ class OrderItem(Base):
     producto = relationship("PharmacyProduct", foreign_keys=[producto_id])
 
 
+class HealthMetric(Base):
+    """Métricas de salud sincronizadas desde wearables / Health Connect."""
+    __tablename__ = "health_metrics"
+
+    id = Column(Integer, primary_key=True, index=True)
+    paciente_id = Column(Integer, ForeignKey("patients.id"), nullable=False)
+    fecha = Column(String(10), nullable=False)      # YYYY-MM-DD
+    pasos = Column(Integer, default=0)
+    calorias = Column(Float, default=0.0)
+    distancia = Column(Float, default=0.0)          # metros
+    fuente = Column(String(50), default="health_connect")
+    actualizado_en = Column(DateTime, default=datetime.utcnow)
+
+    paciente = relationship("Patient", foreign_keys=[paciente_id])
+
+
+class PartnerBenefit(Base):
+    """Convenios con laboratorios, ópticas, farmacias, etc."""
+    __tablename__ = "partner_benefits"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nombre_convenio = Column(String(150), nullable=False)
+    tipo = Column(String(50), default="laboratorio")  # laboratorio|optica|farmacia|gimnasio|otro
+    descripcion = Column(Text, default="")
+    descuento = Column(String(50), default="")        # ej: "15%" o "2x1"
+    logo_url = Column(String(500), default="")
+    activo = Column(Boolean, default=True)
+    creado_en = Column(DateTime, default=datetime.utcnow)
+
+
 class PasswordResetToken(Base):
     __tablename__ = "password_reset_tokens"
 

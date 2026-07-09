@@ -196,7 +196,7 @@ def resultado_pago(estado: str):
 
 # ── SINPE Móvil ───────────────────────────────────────────────────────────────
 
-NUMERO_SINPE = os.getenv("SINPE_NUMERO", "88887777")   # número receptor configurado en Railway
+NUMERO_SINPE = os.getenv("SINPE_NUMERO", "88529543")   # número receptor configurado en Railway
 
 @router.get("/sinpe/info")
 def sinpe_info():

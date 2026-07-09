@@ -555,6 +555,37 @@ class ApiService {
     return data.cast<Map<String, dynamic>>();
   }
 
+  // ── Wearables / Health Connect ────────────────────────────────────────────
+
+  static Future<void> syncHealthMetrics(List<Map<String, dynamic>> dias) async {
+    final res = await DohClient.post(
+      '$baseUrl/api/health-metrics/sync',
+      headers: await _headers(),
+      body: jsonEncode({'dias': dias}),
+    );
+    _parse(res);
+  }
+
+  static Future<List<Map<String, dynamic>>> getHealthMetrics() async {
+    final res = await DohClient.get(
+      '$baseUrl/api/health-metrics',
+      headers: await _headers(),
+    );
+    final data = _parse(res) as List;
+    return data.cast<Map<String, dynamic>>();
+  }
+
+  // ── Convenios ─────────────────────────────────────────────────────────────
+
+  static Future<List<Map<String, dynamic>>> getBenefits() async {
+    final res = await DohClient.get(
+      '$baseUrl/api/benefits',
+      headers: await _headers(),
+    );
+    final data = _parse(res) as List;
+    return data.cast<Map<String, dynamic>>();
+  }
+
   // ── Patient ───────────────────────────────────────────────────────────────
 
   static Future<Patient> getMyProfile() async {

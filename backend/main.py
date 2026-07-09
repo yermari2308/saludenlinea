@@ -10,7 +10,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from database import engine
 from models import Base
-from routers import auth, doctors, appointments, patients, leads, admin, payments, google_auth, chat, password_reset, urgent, medical_record, hra, subscriptions, pharmacy
+from routers import auth, doctors, appointments, patients, leads, admin, payments, google_auth, chat, password_reset, urgent, medical_record, hra, subscriptions, pharmacy, health_metrics, benefits
 
 load_dotenv()
 
@@ -62,8 +62,9 @@ def _seed_pharmacy():
     db = SessionLocal()
     try:
         pharmacy.seed_products(db)
+        benefits.seed_benefits(db)
     except Exception as e:
-        logger.warning("Seed farmacia omitido: %s", e)
+        logger.warning("Seed omitido: %s", e)
     finally:
         db.close()
 
@@ -139,6 +140,8 @@ app.include_router(medical_record.router)
 app.include_router(hra.router)
 app.include_router(subscriptions.router)
 app.include_router(pharmacy.router)
+app.include_router(health_metrics.router)
+app.include_router(benefits.router)
 
 
 @app.get("/api")

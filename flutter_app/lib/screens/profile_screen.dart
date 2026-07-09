@@ -6,6 +6,7 @@ import 'login_screen.dart';
 import 'medical_record_screen.dart';
 import 'hra_screen.dart';
 import 'subscription_screen.dart';
+import 'wearables_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -184,6 +185,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const SubscriptionScreen()),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // ── Banner Wearables ──────────────────────────────────────────────
+          _WearablesBanner(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const WearablesScreen()),
             ),
           ),
           const SizedBox(height: 12),
@@ -400,6 +409,68 @@ class _InfoTile extends StatelessWidget {
 }
 
 // ── Banner HRA ────────────────────────────────────────────────────────────────
+
+// ── Banner Wearables ──────────────────────────────────────────────────────────
+
+class _WearablesBanner extends StatelessWidget {
+  final VoidCallback onTap;
+  const _WearablesBanner({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: const Border(
+              left: BorderSide(color: Color(0xFFF59E0B), width: 3)),
+          boxShadow: [AppTheme.cardShadow],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF59E0B).withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.watch_rounded,
+                  color: Color(0xFFF59E0B), size: 20),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Actividad física',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  SizedBox(height: 3),
+                  Text(
+                    'Conecta tu reloj vía Health Connect',
+                    style: TextStyle(
+                        fontSize: 11, color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(width: 8),
+            Icon(Icons.arrow_forward_ios_rounded,
+                size: 14, color: AppColors.textHint),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 // ── Banner Suscripción ────────────────────────────────────────────────────────
 

@@ -234,21 +234,21 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   letterSpacing: 0.5)),
           const SizedBox(height: 10),
           _MetodoTile(
-            selected: _metodo == _MetodoPago.sinpe,
-            icon: Icons.phone_android_rounded,
-            titulo: 'SINPE Móvil',
-            subtitulo: 'Transferencia instantánea — sin comisión',
-            color: const Color(0xFF16A34A),
-            onTap: () => setState(() => _metodo = _MetodoPago.sinpe),
+            selected: _metodo == _MetodoPago.tarjeta,
+            icon: Icons.bolt_rounded,
+            titulo: 'Pago en línea — verificación automática',
+            subtitulo: 'Tarjeta o SINPE Móvil vía ONVO Pay — se confirma al instante',
+            color: const Color(0xFF6366F1),
+            onTap: () => setState(() => _metodo = _MetodoPago.tarjeta),
           ),
           const SizedBox(height: 8),
           _MetodoTile(
-            selected: _metodo == _MetodoPago.tarjeta,
-            icon: Icons.credit_card_rounded,
-            titulo: 'Tarjeta de crédito / débito',
-            subtitulo: 'Visa, Mastercard — procesado por ONVO Pay',
-            color: const Color(0xFF6366F1),
-            onTap: () => setState(() => _metodo = _MetodoPago.tarjeta),
+            selected: _metodo == _MetodoPago.sinpe,
+            icon: Icons.phone_android_rounded,
+            titulo: 'SINPE Móvil manual',
+            subtitulo: 'Sin comisión — un administrador verifica tu comprobante',
+            color: const Color(0xFF16A34A),
+            onTap: () => setState(() => _metodo = _MetodoPago.sinpe),
           ),
           const SizedBox(height: 24),
 
@@ -383,8 +383,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Text(
-                'Serás redirigido a ONVO Pay — pasarela de pagos costarricense '
-                'con cifrado SSL. Aceptamos Visa y Mastercard.',
+                'Serás redirigido a ONVO Pay — pasarela de pagos costarricense con '
+                'cifrado SSL. Podés pagar con tarjeta (Visa/Mastercard) o SINPE Móvil, '
+                'y tu cita se confirma automáticamente al completar el pago.',
                 style: TextStyle(
                     fontSize: 13, color: Color(0xFF4338CA), height: 1.5),
               ),
@@ -394,7 +395,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               width: double.infinity,
               child: ElevatedButton.icon(
                 icon: const Icon(Icons.open_in_new_rounded),
-                label: const Text('Pagar con tarjeta',
+                label: const Text('Pagar en línea',
                     style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
                 onPressed: _loading ? null : _pagarTarjeta,
                 style: ElevatedButton.styleFrom(

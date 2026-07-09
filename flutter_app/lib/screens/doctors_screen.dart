@@ -21,16 +21,31 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
   final List<String> _especialidades = [
     'Todas',
     'Medicina General',
-    'Pediatría',
-    'Cardiología',
-    'Dermatología',
+    'Nutrición',
     'Psicología',
+    'Pediatría',
+    'Ginecología',
+    'Dermatología',
+    'Cardiología',
+    'Endocrinología',
+    'Psiquiatría',
+    'Otorrino',
   ];
+
+  List<Map<String, dynamic>> _convenios = [];
 
   @override
   void initState() {
     super.initState();
     _load();
+    _loadConvenios();
+  }
+
+  Future<void> _loadConvenios() async {
+    try {
+      final data = await ApiService.getBenefits();
+      if (mounted) setState(() => _convenios = data);
+    } catch (_) {}
   }
 
   Future<void> _load([String? esp]) async {
@@ -240,7 +255,37 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                 ),
               ),
             )
-          else
+          else ...[
+            // ── Convenios (Fase 7) ──────────────────────────────────────────
+            if (_convenios.isNotEmpty)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 0, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('CONVENIOS Y BENEFICIOS',
+                          style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textSecondary,
+                              letterSpacing: 0.6)),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        height: 116,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.only(right: 16),
+                          itemCount: _convenios.length,
+                          separatorBuilder: (_, __) => const SizedBox(width: 10),
+                          itemBuilder: (_, i) =>
+                              _ConvenioCard(convenio: _convenios[i]),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(0, 12, 0, 24),
               sliver: SliverList(
@@ -257,6 +302,99 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                 ),
               ),
             ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── Tarjeta de convenio ────────────────────────────────────────────────────────
+
+class _ConvenioCard extends StatelessWidget {
+  final Map<String, dynamic> convenio;
+  const _ConvenioCard({required this.convenio});
+
+  (IconData, Color) get _estilo {
+    switch (convenio['tipo'] as String? ?? '') {
+      case 'laboratorio':
+        return (Icons.biotech_rounded, const Color(0xFF7C3AED));
+      case 'optica':
+        return (Icons.visibility_rounded, const Color(0xFF2563EB));
+      case 'farmacia':
+        return (Icons.local_pharmacy_rounded, AppColors.accentDark);
+      case 'gimnasio':
+        return (Icons.fitness_center_rounded, const Color(0xFFF59E0B));
+      default:
+        return (Icons.card_giftcard_rounded, AppColors.primaryLight);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final (icon, color) = _estilo;
+    return Container(
+      width: 200,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [AppTheme.cardShadow],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 16),
+              ),
+              const SizedBox(width: 8),
+              if ((convenio['descuento'] as String? ?? '').isNotEmpty)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    convenio['descuento'] as String,
+                    style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: color),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            convenio['nombre_convenio'] as String? ?? '',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+                color: AppColors.textPrimary),
+          ),
+          const SizedBox(height: 3),
+          Expanded(
+            child: Text(
+              convenio['descripcion'] as String? ?? '',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textSecondary,
+                  height: 1.3),
+            ),
+          ),
         ],
       ),
     );

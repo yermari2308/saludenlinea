@@ -33,7 +33,7 @@ android {
         applicationId = "com.saludenlinea.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk = 26  // Health Connect requiere Android 8.0+
         targetSdk = flutter.targetSdkVersion
         versionCode = 1
         versionName = "1.0"
