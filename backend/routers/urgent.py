@@ -17,22 +17,12 @@ from database import get_db
 from models import ConsultQueue, Doctor, Appointment, ConsultSession, Payment
 from utils.auth import require_patient, require_doctor, get_current_user
 
-router = APIRouter(prefix="/api/urgent", tags=["urgent"])
+from utils.video import video_url as _jitsi_url  # Daily.co con fallback a Jitsi
 
-JITSI_HOST = os.getenv("JITSI_HOST", "meet.jit.si")
+router = APIRouter(prefix="/api/urgent", tags=["urgent"])
 
 # WebSocket: paciente_id → lista de conexiones esperando notificación
 _ws_pacientes: Dict[int, List[WebSocket]] = {}
-
-
-def _jitsi_url(token: str, display_name: str = "") -> str:
-    room = re.sub(r"[^a-zA-Z0-9]", "", token)[:32]
-    room = f"SaludEnLineaUrgente{room}"
-    base = f"https://{JITSI_HOST}/{room}"
-    if display_name:
-        safe = display_name.replace(" ", "%20")
-        return f"{base}#userInfo.displayName=\"{safe}\""
-    return base
 
 
 async def _notify_patient(paciente_id: int, payload: dict):

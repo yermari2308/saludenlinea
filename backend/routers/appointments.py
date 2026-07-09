@@ -12,20 +12,9 @@ from models import Appointment, Doctor, Payment, ConsultSession, Subscription
 from schemas import AppointmentCreate, AppointmentOut, NotasUpdate, SessionOut, RescheduleRequest
 from utils.auth import require_patient, require_doctor, get_current_user
 
+from utils.video import video_url as _jitsi_url  # Daily.co con fallback a Jitsi
+
 router = APIRouter(prefix="/api", tags=["appointments"])
-
-JITSI_HOST = os.getenv("JITSI_HOST", "meet.jit.si")
-
-
-def _jitsi_url(token_sala: str, display_name: str = "") -> str:
-    # Convierte el token a un nombre de sala URL-seguro
-    room = re.sub(r"[^a-zA-Z0-9]", "", token_sala)[:32]
-    room = f"SaludEnLinea{room}"
-    base = f"https://{JITSI_HOST}/{room}"
-    if display_name:
-        safe = display_name.replace(" ", "%20")
-        return f"{base}#userInfo.displayName=\"{safe}\""
-    return base
 
 
 def _suscripcion_activa_con_cupo(paciente_id: int, db: Session):

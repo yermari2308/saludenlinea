@@ -283,7 +283,7 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
                 SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Videollamada cifrada con Jitsi Meet. No necesitas crear cuenta.',
+                    'Videollamada segura y cifrada. No necesitas crear cuenta.',
                     style: TextStyle(
                         color: AppColors.textSecondary, fontSize: 12, height: 1.4),
                   ),
@@ -299,7 +299,7 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
   Widget _buildPasos() {
     final pasos = [
       (Icons.touch_app_rounded, 'Toca "Entrar a la consulta"',
-          'Se abrirá Jitsi Meet automáticamente.'),
+          'La sala de video se abrirá automáticamente.'),
       (Icons.camera_alt_rounded, 'Permite cámara y micrófono',
           'Acepta los permisos para que el médico pueda verte.'),
       (Icons.access_time_rounded, 'Espera al médico',
