@@ -10,6 +10,7 @@ import 'consultation_screen.dart';
 import 'chat_screen.dart';
 import 'login_screen.dart';
 import 'waiting_room_screen.dart';
+import '../design_system.dart';
 import 'doctor_patients_screen.dart';
 import 'doctor_earnings_screen.dart';
 import 'doctor_profile_screen.dart';
@@ -419,6 +420,12 @@ class _DoctorInicioTabState extends State<_DoctorInicioTab> {
       foregroundColor: Colors.white,
       automaticallyImplyLeading: false,
       actions: [
+        // Command palette: buscar expediente por N° de serie o nombre
+        IconButton(
+          icon: const Icon(Icons.search_rounded, size: 23),
+          tooltip: 'Buscar expediente (N° de serie)',
+          onPressed: () => mostrarCommandPalette(context),
+        ),
         IconButton(
           icon: const Icon(Icons.refresh_rounded, size: 22),
           onPressed: () => setState(() => _cargarDatos()),
@@ -738,30 +745,37 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Tile de métrica estilo Linear: tinta oscura, número tabular blanco
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [AppTheme.cardShadow],
+          gradient: const LinearGradient(
+            colors: [DSColors.ink, DSColors.inkSoft],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: DSElevation.rest,
         ),
         child: Column(
           children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 20),
-            ),
-            const SizedBox(height: 6),
+            Icon(icon, color: color, size: 18),
+            const SizedBox(height: 8),
             Text(value,
-                style: TextStyle(
-                    fontSize: 20, fontWeight: FontWeight.w800, color: color)),
+                style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                    fontFeatures: [FontFeature.tabularFigures()],
+                    color: Colors.white)),
+            const SizedBox(height: 2),
             Text(label,
-                style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.4,
+                    color: Colors.white.withOpacity(0.45)),
                 textAlign: TextAlign.center),
           ],
         ),

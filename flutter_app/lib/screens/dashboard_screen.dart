@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
+import '../design_system.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
 import 'consultation_screen.dart';
@@ -9,7 +10,9 @@ import 'pharmacy_screen.dart';
 import 'subscription_screen.dart';
 import 'wearables_screen.dart';
 
-/// Dashboard del paciente: cada elemento responde "¿qué necesito ahora?"
+/// HOME 2.0 — Bento grid sobre lienzo papel con hero de tinta.
+/// Jerarquía: Hero (saludo + consulta ya) → próxima cita → anillos de
+/// estado → acciones → actividad reciente → recomendación.
 class DashboardScreen extends StatefulWidget {
   final VoidCallback onConsultarAhora;
   final VoidCallback onVerMedicos;
@@ -29,6 +32,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   String _nombre = '';
   Appointment? _proximaCita;
+  Appointment? _ultimaConsulta;
   int _expedientePct = 0;
   int? _saludPct;
   bool _loading = true;
@@ -51,17 +55,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ]);
       if (!mounted) return;
 
-      final citas = (results[0] as List<Appointment>)
+      final todas = results[0] as List<Appointment>;
+      final proximas = todas
           .where((c) =>
               c.estado == 'programada' && c.fechaHora.isAfter(DateTime.now()))
           .toList()
         ..sort((a, b) => a.fechaHora.compareTo(b.fechaHora));
+      final completadas = todas
+          .where((c) => c.estado == 'completada')
+          .toList()
+        ..sort((a, b) => b.fechaHora.compareTo(a.fechaHora));
 
       final record = results[1] as Map<String, dynamic>;
       final hra = results[2] as List<Map<String, dynamic>>;
 
       setState(() {
-        _proximaCita = citas.isNotEmpty ? citas.first : null;
+        _proximaCita = proximas.isNotEmpty ? proximas.first : null;
+        _ultimaConsulta = completadas.isNotEmpty ? completadas.first : null;
         _expedientePct = record['completitud_pct'] as int? ?? 0;
         if (hra.isNotEmpty) {
           final puntaje = hra.first['puntaje_total'] as int? ?? 0;
@@ -83,580 +93,540 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final primerNombre =
-        _nombre.isNotEmpty ? _nombre.split(' ').first : '';
+    final primerNombre = _nombre.isNotEmpty ? _nombre.split(' ').first : '';
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: DSColors.canvas,
       body: RefreshIndicator(
-        color: AppColors.primaryLight,
+        color: DSColors.brand,
         onRefresh: _load,
-        child: CustomScrollView(
+        child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            // ── Cabecera con saludo personalizado ─────────────────────────
-            SliverToBoxAdapter(
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: AppTheme.primaryGradient,
-                  borderRadius: const BorderRadius.vertical(
-                      bottom: Radius.circular(32)),
-                ),
-                child: SafeArea(
-                  bottom: false,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
+          padding: const EdgeInsets.fromLTRB(DS.s2, 0, DS.s2, 120),
+          children: [
+            SafeArea(bottom: false, child: SizedBox(height: DS.s1)),
+
+            // ── Saludo sobre el lienzo (sin cabecera de color) ─────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: DS.s05),
+              child: Row(
+                children: [
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    _saludo,
-                                    style: TextStyle(
-                                        color: Colors.white.withOpacity(0.65),
-                                        fontSize: 14),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    primerNombre.isEmpty
-                                        ? 'Bienvenido'
-                                        : primerNombre,
-                                    style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 26,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: -0.5),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            if (primerNombre.isNotEmpty)
-                              GradientAvatar(
-                                initials: primerNombre.length >= 2
-                                    ? primerNombre.substring(0, 2)
-                                    : primerNombre,
-                                radius: 24,
-                                colors: const [
-                                  AppColors.accent,
-                                  AppColors.accentDark
-                                ],
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 22),
-                        // ── Botón principal: Consultar ahora ──────────────
-                        PressableCard(
-                          onTap: widget.onConsultarAhora,
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 18),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [
-                                  AppColors.accent,
-                                  AppColors.accentDark
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(18),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.accent.withOpacity(0.4),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 8),
-                                ),
-                              ],
-                            ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.video_camera_front_outlined,
-                                    color: Colors.white, size: 26),
-                                SizedBox(width: 12),
-                                Text(
-                                  'Consultar ahora',
-                                  style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: -0.2),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Center(
-                          child: Text(
-                            'Un médico te atiende en minutos',
-                            style: TextStyle(
-                                color: Colors.white.withOpacity(0.55),
-                                fontSize: 12),
-                          ),
+                        Text('$_saludo,', style: DSText.body),
+                        Text(
+                          primerNombre.isEmpty ? 'Bienvenido' : primerNombre,
+                          style: DSText.display,
                         ),
                       ],
                     ),
                   ),
+                  if (primerNombre.isNotEmpty)
+                    Container(
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                            colors: [DSColors.brand, Color(0xFF7C74F2)]),
+                        shape: BoxShape.circle,
+                        boxShadow: DSElevation.glow(DSColors.brand),
+                      ),
+                      child: Center(
+                        child: Text(
+                          primerNombre.substring(0, 1).toUpperCase(),
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: DS.s3),
+
+            // ── HERO: tarjeta de tinta con la acción principal ─────────────
+            DSInkCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const DSChip(
+                          label: 'MÉDICOS EN LÍNEA',
+                          color: DSColors.mint,
+                          icon: Icons.circle),
+                      const Spacer(),
+                      Icon(Icons.bolt_rounded,
+                          color: Colors.white.withOpacity(0.25), size: 20),
+                    ],
+                  ),
+                  const SizedBox(height: DS.s2),
+                  const Text(
+                    '¿Cómo te sentís\nhoy?',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.8,
+                        height: 1.15),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Un médico te atiende por video en minutos.',
+                    style: TextStyle(
+                        color: Colors.white.withOpacity(0.55),
+                        fontSize: 13.5,
+                        height: 1.4),
+                  ),
+                  const SizedBox(height: DS.s3),
+                  DSButton(
+                    label: 'Consultar ahora',
+                    icon: Icons.video_camera_front_rounded,
+                    color: Colors.white,
+                    foreground: DSColors.ink,
+                    onTap: widget.onConsultarAhora,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: DS.s3),
+
+            if (_loading) ...[
+              const Skeleton(width: double.infinity, height: 96, radius: 20),
+              const SizedBox(height: DS.s2),
+              const Row(children: [
+                Expanded(child: Skeleton(height: 140, radius: 20)),
+                SizedBox(width: DS.s2),
+                Expanded(child: Skeleton(height: 140, radius: 20)),
+              ]),
+            ] else ...[
+              // ── Próxima cita (ancho completo) ────────────────────────────
+              if (_proximaCita != null) ...[
+                const DSSectionHeader(title: 'Próxima cita'),
+                _CitaBento(cita: _proximaCita!, onVer: widget.onVerCitas),
+                const SizedBox(height: DS.s3),
+              ],
+
+              // ── Bento: anillos de estado ─────────────────────────────────
+              const DSSectionHeader(title: 'Tu estado de salud'),
+              Row(
+                children: [
+                  Expanded(
+                    child: _RingBento(
+                      titulo: 'Salud',
+                      pct: _saludPct,
+                      color: _saludPct == null
+                          ? DSColors.textFaint
+                          : _saludPct! >= 75
+                              ? DSColors.semGood
+                              : _saludPct! >= 50
+                                  ? DSColors.semWarn
+                                  : DSColors.semBad,
+                      hint: _saludPct == null
+                          ? 'Evaluate en 2 min'
+                          : 'Última evaluación',
+                      onTap: () => Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const HraScreen())),
+                    ),
+                  ),
+                  const SizedBox(width: DS.s2),
+                  Expanded(
+                    child: _RingBento(
+                      titulo: 'Expediente',
+                      pct: _expedientePct,
+                      color: _expedientePct >= 80
+                          ? DSColors.semGood
+                          : DSColors.brand,
+                      hint: _expedientePct >= 80
+                          ? 'Completo'
+                          : 'Completalo',
+                      onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const MedicalRecordScreen())),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: DS.s3),
+
+              // ── Acciones (fila horizontal deslizable) ────────────────────
+              const DSSectionHeader(title: 'Servicios'),
+              SizedBox(
+                height: 96,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    _ServicioPill(
+                        icon: Icons.search_rounded,
+                        label: 'Médicos',
+                        color: DSColors.brand,
+                        onTap: widget.onVerMedicos),
+                    _ServicioPill(
+                        icon: Icons.local_pharmacy_rounded,
+                        label: 'Farmacia',
+                        color: DSColors.mint,
+                        onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const PharmacyScreen()))),
+                    _ServicioPill(
+                        icon: Icons.description_rounded,
+                        label: 'Recetas',
+                        color: const Color(0xFF8B5CF6),
+                        onTap: widget.onVerCitas),
+                    _ServicioPill(
+                        icon: Icons.watch_rounded,
+                        label: 'Actividad',
+                        color: const Color(0xFFF59E0B),
+                        onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const WearablesScreen()))),
+                    _ServicioPill(
+                        icon: Icons.workspace_premium_rounded,
+                        label: 'Planes',
+                        color: const Color(0xFF0EA5E9),
+                        onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const SubscriptionScreen()))),
+                  ],
                 ),
               ),
-            ),
+              const SizedBox(height: DS.s3),
 
-            // ── Contenido ─────────────────────────────────────────────────
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-                child: _loading
-                    ? const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Skeleton(width: 140, height: 12),
-                          SizedBox(height: 12),
-                          Skeleton(width: double.infinity, height: 84, radius: 18),
-                          SizedBox(height: 24),
-                          Skeleton(width: 140, height: 12),
-                          SizedBox(height: 12),
-                          Row(children: [
-                            Expanded(child: Skeleton(height: 104, radius: 18)),
-                            SizedBox(width: 12),
-                            Expanded(child: Skeleton(height: 104, radius: 18)),
-                            SizedBox(width: 12),
-                            Expanded(child: Skeleton(height: 104, radius: 18)),
-                          ]),
-                          SizedBox(height: 12),
-                          Row(children: [
-                            Expanded(child: Skeleton(height: 104, radius: 18)),
-                            SizedBox(width: 12),
-                            Expanded(child: Skeleton(height: 104, radius: 18)),
-                            SizedBox(width: 12),
-                            Expanded(child: Skeleton(height: 104, radius: 18)),
-                          ]),
-                        ],
-                      )
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Próxima cita
-                          if (_proximaCita != null) ...[
-                            const _SectionTitle('TU PRÓXIMA CITA'),
-                            const SizedBox(height: 10),
-                            _ProximaCitaCard(
-                              cita: _proximaCita!,
-                              onTap: widget.onVerCitas,
-                            ),
-                            const SizedBox(height: 24),
-                          ],
-
-                          // Accesos rápidos
-                          const _SectionTitle('ACCESOS RÁPIDOS'),
-                          const SizedBox(height: 12),
-                          GridView.count(
-                            crossAxisCount: 3,
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            mainAxisSpacing: 12,
-                            crossAxisSpacing: 12,
-                            childAspectRatio: 0.95,
-                            children: [
-                              _QuickAction(
-                                icon: Icons.search_outlined,
-                                label: 'Buscar\nmédico',
-                                color: AppColors.primaryLight,
-                                onTap: widget.onVerMedicos,
-                              ),
-                              _QuickAction(
-                                icon: Icons.description_outlined,
-                                label: 'Mis\nrecetas',
-                                color: const Color(0xFF7C3AED),
-                                onTap: widget.onVerCitas,
-                              ),
-                              _QuickAction(
-                                icon: Icons.local_pharmacy_outlined,
-                                label: 'Farmacia',
-                                color: AppColors.accentDark,
-                                onTap: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) =>
-                                            const PharmacyScreen())),
-                              ),
-                              _QuickAction(
-                                icon: Icons.folder_shared_outlined,
-                                label: 'Mi\nexpediente',
-                                color: const Color(0xFF0891B2),
-                                onTap: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) =>
-                                            const MedicalRecordScreen())),
-                              ),
-                              _QuickAction(
-                                icon: Icons.monitor_heart_outlined,
-                                label: 'Evaluación\nde salud',
-                                color: const Color(0xFFDB2777),
-                                onTap: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) => const HraScreen())),
-                              ),
-                              _QuickAction(
-                                icon: Icons.watch_outlined,
-                                label: 'Actividad\nfísica',
-                                color: const Color(0xFFF59E0B),
-                                onTap: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) =>
-                                            const WearablesScreen())),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-
-                          // Estado de salud
-                          const _SectionTitle('TU ESTADO'),
-                          const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _EstadoCard(
-                                  icon: Icons.favorite_outline,
-                                  label: 'Salud general',
-                                  valor: _saludPct != null
-                                      ? '$_saludPct%'
-                                      : '—',
-                                  color: _saludPct == null
-                                      ? AppColors.textHint
-                                      : _saludPct! >= 75
-                                          ? AppColors.semGreen
-                                          : _saludPct! >= 50
-                                              ? AppColors.semYellow
-                                              : AppColors.semRed,
-                                  hint: _saludPct == null
-                                      ? 'Hacé tu evaluación'
-                                      : 'Última evaluación',
-                                  onTap: () => Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (_) => const HraScreen())),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _EstadoCard(
-                                  icon: Icons.assignment_outlined,
-                                  label: 'Expediente',
-                                  valor: '$_expedientePct%',
-                                  color: _expedientePct >= 80
-                                      ? AppColors.semGreen
-                                      : AppColors.primaryLight,
-                                  hint: _expedientePct >= 80
-                                      ? 'Completo'
-                                      : 'Completalo',
-                                  onTap: () => Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (_) =>
-                                              const MedicalRecordScreen())),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-
-                          // Plan mensual
-                          PressableCard(
-                            onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (_) =>
-                                        const SubscriptionScreen())),
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: AppTheme.glassCard(radius: 18),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primaryLight
-                                          .withOpacity(0.1),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                        Icons.workspace_premium_outlined,
-                                        color: AppColors.primaryLight,
-                                        size: 20),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  const Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text('Planes de suscripción',
-                                            style: TextStyle(
-                                                fontWeight: FontWeight.w700,
-                                                fontSize: 14,
-                                                color:
-                                                    AppColors.textPrimary)),
-                                        SizedBox(height: 2),
-                                        Text(
-                                            'Consultas desde \$9.99 al mes',
-                                            style: TextStyle(
-                                                fontSize: 12,
-                                                color: AppColors
-                                                    .textSecondary)),
-                                      ],
-                                    ),
-                                  ),
-                                  const Icon(Icons.arrow_forward_ios_rounded,
-                                      size: 14, color: AppColors.textHint),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
+              // ── Actividad reciente ───────────────────────────────────────
+              if (_ultimaConsulta != null) ...[
+                const DSSectionHeader(title: 'Actividad reciente'),
+                DSCard(
+                  onTap: widget.onVerCitas,
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: DSColors.mintSoft,
+                          borderRadius: DSRadius.rSm,
+                        ),
+                        child: const Icon(Icons.check_rounded,
+                            color: DSColors.mint, size: 20),
                       ),
+                      const SizedBox(width: DS.s2),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Consulta completada',
+                                style: DSText.headline),
+                            const SizedBox(height: 2),
+                            Text(
+                              _fechaCorta(_ultimaConsulta!.fechaHora) +
+                                  (_ultimaConsulta!.receta.isNotEmpty
+                                      ? ' · con receta'
+                                      : ''),
+                              style: DSText.label,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right_rounded,
+                          color: DSColors.textFaint),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: DS.s3),
+              ],
+
+              // ── Recomendación contextual ─────────────────────────────────
+              const DSSectionHeader(title: 'Para vos'),
+              _Recomendacion(
+                saludPct: _saludPct,
+                expedientePct: _expedientePct,
               ),
-            ),
+            ],
           ],
         ),
       ),
     );
   }
+
+  static String _fechaCorta(DateTime f) =>
+      '${f.day.toString().padLeft(2, '0')}/${f.month.toString().padLeft(2, '0')}/${f.year}';
 }
 
-class _SectionTitle extends StatelessWidget {
-  final String text;
-  const _SectionTitle(this.text);
+// ── Bento de próxima cita ─────────────────────────────────────────────────────
 
-  @override
-  Widget build(BuildContext context) => Text(
-        text,
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: AppColors.textSecondary,
-          letterSpacing: 0.8,
-        ),
-      );
-}
-
-class _ProximaCitaCard extends StatelessWidget {
+class _CitaBento extends StatelessWidget {
   final Appointment cita;
-  final VoidCallback onTap;
+  final VoidCallback onVer;
 
-  const _ProximaCitaCard({required this.cita, required this.onTap});
+  const _CitaBento({required this.cita, required this.onVer});
 
   static const _meses = [
     'ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN',
     'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'
   ];
-  static const _dias = [
-    'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'
-  ];
 
   @override
   Widget build(BuildContext context) {
     final f = cita.fechaHora;
-    final esHoy = f.year == DateTime.now().year &&
-        f.month == DateTime.now().month &&
-        f.day == DateTime.now().day;
+    final hoy = DateTime.now();
+    final esHoy =
+        f.year == hoy.year && f.month == hoy.month && f.day == hoy.day;
 
-    return PressableCard(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: AppTheme.glassCard(radius: 18).copyWith(
-          border: Border.all(
-              color: AppColors.primaryLight.withOpacity(0.25), width: 1),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 54,
-              height: 54,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [
-                  AppColors.primaryLight,
-                  Color(0xFF1D4ED8),
-                ]),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text('${f.day}',
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          height: 1)),
-                  Text(
-                    _meses[f.month - 1],
-                    style: TextStyle(
-                        color: Colors.white.withOpacity(0.8),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700),
-                  ),
-                ],
-              ),
+    return DSCard(
+      onTap: onVer,
+      shadows: DSElevation.float,
+      child: Row(
+        children: [
+          Container(
+            width: 56,
+            height: 60,
+            decoration: BoxDecoration(
+              color: DSColors.brandSoft,
+              borderRadius: DSRadius.rSm,
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    esHoy ? '¡Hoy!' : _dias[f.weekday - 1],
-                    style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: esHoy
-                            ? AppColors.accentDark
-                            : AppColors.textSecondary),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Videoconsulta · ${f.hour.toString().padLeft(2, '0')}:${f.minute.toString().padLeft(2, '0')}',
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('${f.day}',
                     style: const TextStyle(
-                        fontSize: 15,
+                        color: DSColors.brand,
+                        fontSize: 22,
                         fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
-                        letterSpacing: -0.2),
-                  ),
-                ],
-              ),
+                        height: 1)),
+                Text(_meses[f.month - 1],
+                    style: const TextStyle(
+                        color: DSColors.brand,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1)),
+              ],
             ),
-            PressableCard(
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) =>
-                        ConsultationScreen(appointmentId: cita.id)),
-              ),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryLight,
-                  borderRadius: BorderRadius.circular(12),
+          ),
+          const SizedBox(width: DS.s2),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DSChip(
+                  label: esHoy ? 'HOY' : 'PROGRAMADA',
+                  color: esHoy ? DSColors.mint : DSColors.brand,
                 ),
-                child: const Text('Entrar',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700)),
-              ),
+                const SizedBox(height: 6),
+                Text(
+                  'Videoconsulta · ${f.hour.toString().padLeft(2, '0')}:${f.minute.toString().padLeft(2, '0')}',
+                  style: DSText.headline,
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          DSPressable(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => ConsultationScreen(appointmentId: cita.id)),
+            ),
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: DSColors.ink,
+                borderRadius: BorderRadius.circular(100),
+              ),
+              child: const Text('Entrar',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800)),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _QuickAction extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
+// ── Bento con anillo de progreso ──────────────────────────────────────────────
 
-  const _QuickAction({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) => PressableCard(
-        onTap: onTap,
-        child: Container(
-          decoration: AppTheme.glassCard(radius: 18),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(11),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: color, size: 22),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                    height: 1.2),
-              ),
-            ],
-          ),
-        ),
-      );
-}
-
-class _EstadoCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String valor;
+class _RingBento extends StatelessWidget {
+  final String titulo;
+  final int? pct;
   final Color color;
   final String hint;
   final VoidCallback onTap;
 
-  const _EstadoCard({
-    required this.icon,
-    required this.label,
-    required this.valor,
+  const _RingBento({
+    required this.titulo,
+    required this.pct,
     required this.color,
     required this.hint,
     required this.onTap,
   });
 
   @override
-  Widget build(BuildContext context) => PressableCard(
+  Widget build(BuildContext context) => DSCard(
         onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: AppTheme.glassCard(radius: 18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(icon, size: 16, color: color),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(label,
-                        style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textSecondary)),
-                  ),
-                ],
+        padding: const EdgeInsets.all(DS.s2),
+        child: Column(
+          children: [
+            DSProgressRing(
+              pct: (pct ?? 0) / 100,
+              color: color,
+              size: 84,
+              center: Text(
+                pct != null ? '$pct%' : '—',
+                style: TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                    color: color),
               ),
-              const SizedBox(height: 10),
-              Text(valor,
-                  style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      color: color,
-                      letterSpacing: -0.5)),
-              const SizedBox(height: 2),
-              Text(hint,
-                  style: const TextStyle(
-                      fontSize: 11, color: AppColors.textHint)),
-            ],
+            ),
+            const SizedBox(height: DS.s1),
+            Text(titulo, style: DSText.headline),
+            const SizedBox(height: 2),
+            Text(hint,
+                style: const TextStyle(
+                    fontSize: 11, color: DSColors.textFaint)),
+          ],
+        ),
+      );
+}
+
+// ── Píldora de servicio ───────────────────────────────────────────────────────
+
+class _ServicioPill extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ServicioPill({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(right: DS.s2 - 4),
+        child: DSPressable(
+          onTap: onTap,
+          child: Container(
+            width: 84,
+            decoration: BoxDecoration(
+              color: DSColors.surface,
+              borderRadius: DSRadius.rMd,
+              boxShadow: DSElevation.rest,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.10),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: color, size: 22),
+                ),
+                const SizedBox(height: 6),
+                Text(label,
+                    style: const TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: DSColors.textStrong)),
+              ],
+            ),
           ),
         ),
       );
+}
+
+// ── Recomendación contextual ──────────────────────────────────────────────────
+
+class _Recomendacion extends StatelessWidget {
+  final int? saludPct;
+  final int expedientePct;
+
+  const _Recomendacion({required this.saludPct, required this.expedientePct});
+
+  @override
+  Widget build(BuildContext context) {
+    final String texto;
+    final String cta;
+    final Widget destino;
+    final IconData icon;
+
+    if (saludPct == null) {
+      texto =
+          'Aún no conocés tu estado de salud. Respondé 6 preguntas y recibí tu semáforo personalizado.';
+      cta = 'Hacer mi evaluación';
+      destino = const HraScreen();
+      icon = Icons.monitor_heart_rounded;
+    } else if (expedientePct < 80) {
+      texto =
+          'Tu expediente está al $expedientePct%. Completarlo ayuda al médico a darte un mejor diagnóstico.';
+      cta = 'Completar expediente';
+      destino = const MedicalRecordScreen();
+      icon = Icons.folder_shared_rounded;
+    } else {
+      texto =
+          'Todo al día. Sincronizá tu actividad física para que tu médico vea tu progreso.';
+      cta = 'Conectar mi reloj';
+      destino = const WearablesScreen();
+      icon = Icons.watch_rounded;
+    }
+
+    return DSCard(
+      color: DSColors.brandSoft,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: DSColors.brand, size: 20),
+              const SizedBox(width: DS.s1),
+              const Text('Recomendado para vos',
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: DSColors.brand)),
+            ],
+          ),
+          const SizedBox(height: DS.s1),
+          Text(texto,
+              style: const TextStyle(
+                  fontSize: 13.5,
+                  height: 1.5,
+                  color: DSColors.textStrong)),
+          const SizedBox(height: DS.s2),
+          DSPressable(
+            onTap: () => Navigator.push(
+                context, MaterialPageRoute(builder: (_) => destino)),
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+              decoration: BoxDecoration(
+                color: DSColors.brand,
+                borderRadius: BorderRadius.circular(100),
+              ),
+              child: Text(cta,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

@@ -1,33 +1,31 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // ── Identidad médica premium ────────────────────────────────────────────
-  // Azul petróleo: profundidad y confianza (evita el azul hospital típico)
-  static const primary = Color(0xFF0D3B4F);
-  // Azul eléctrico: tecnología y rapidez
-  static const primaryLight = Color(0xFF2563EB);
-  // Turquesa: medicina moderna
-  static const accent = Color(0xFF14B8A6);
-  static const accentDark = Color(0xFF0D9488);
-  // Blanco casi puro con un respiro de gris frío
-  static const background = Color(0xFFF8FAFC);
+  // ══ DESIGN SYSTEM 2.0 — "Pura Vida Ink" ═════════════════════════════════
+  // Tinta grafito + índigo eléctrico + menta clínica sobre lienzo papel.
+  // Estos tokens re-visten TODA la app (ver design_system.dart).
+  static const primary = Color(0xFF16181D);      // tinta: superficies fuertes
+  static const primaryLight = Color(0xFF4F46E5); // índigo: toda acción
+  static const accent = Color(0xFF34D399);       // menta: medicina moderna
+  static const accentDark = Color(0xFF10B981);
+  static const background = Color(0xFFF4F5F7);   // lienzo papel frío
   static const surface = Colors.white;
-  static const textPrimary = Color(0xFF0F2A37);
-  static const textSecondary = Color(0xFF5B6B7F);
-  static const textHint = Color(0xFF94A3B8);
-  static const error = Color(0xFFE53E3E);
-  static const warning = Color(0xFFED8936);
-  static const success = Color(0xFF16A34A);  // verde SOLO para estados positivos
-  static const cardBorder = Color(0xFFE9EEF4);
+  static const textPrimary = Color(0xFF16181D);
+  static const textSecondary = Color(0xFF626B77);
+  static const textHint = Color(0xFF9AA3AE);
+  static const error = Color(0xFFE11D48);
+  static const warning = Color(0xFFF59E0B);
+  static const success = Color(0xFF10B981);  // verde SOLO para estados positivos
+  static const cardBorder = Color(0xFFE7E9EE);
 
-  // ── Acento de emergencia: cinabrio oscuro — urgencia profesional, no alarmista
-  static const alert = Color(0xFFD9453A);
-  static const alertDark = Color(0xFFB23429);
+  // ── Urgencia: coral — alerta viva sin agresión ───────────────────────────
+  static const alert = Color(0xFFF43F5E);
+  static const alertDark = Color(0xFFE11D48);
 
-  // ── Semáforo semántico (HRA / estados clínicos) — distinto de la marca ──
-  static const semGreen = Color(0xFF3BA55D);   // salud / seguro
-  static const semYellow = Color(0xFFF2B01E);  // precaución / revisión
-  static const semRed = Color(0xFFE8590C);     // atención necesaria
+  // ── Semáforo clínico (HRA) — separado de la marca ────────────────────────
+  static const semGreen = Color(0xFF10B981);
+  static const semYellow = Color(0xFFF59E0B);
+  static const semRed = Color(0xFFEF4444);
 }
 
 class AppTheme {
@@ -133,9 +131,9 @@ class AppTheme {
         ),
       );
 
-  // Degradado sutil petróleo → azul profundo (nunca saturado)
+  // Degradado de tinta: grafito profundo (cabeceras y superficies hero)
   static LinearGradient get primaryGradient => const LinearGradient(
-        colors: [AppColors.primary, Color(0xFF14557A)],
+        colors: [AppColors.primary, Color(0xFF2A3140)],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       );

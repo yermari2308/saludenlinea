@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../app_theme.dart';
+import '../design_system.dart';
 import '../services/api_service.dart';
 import 'dashboard_screen.dart';
 import 'doctors_screen.dart';
@@ -158,219 +159,20 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: DSColors.canvas,
+      extendBody: true, // el contenido fluye bajo el dock flotante
       body: _screens[_currentIndex],
-      floatingActionButton: _role == 'patient'
-          ? _BotonRojo(onTap: _onBotonRojo)
-          : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: _BottomBar(
-        currentIndex: _currentIndex,
-        showFab: _role == 'patient',
+      bottomNavigationBar: DSDock(
+        index: _currentIndex,
         onTap: (i) => setState(() => _currentIndex = i),
-      ),
-    );
-  }
-}
-
-// ── Botón Rojo ────────────────────────────────────────────────────────────────
-
-class _BotonRojo extends StatelessWidget {
-  final VoidCallback onTap;
-  const _BotonRojo({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 64,
-        height: 64,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: const LinearGradient(
-            colors: [AppColors.alert, AppColors.alertDark],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          // Anillo blanco: integra el botón en la barra con elevación propia
-          border: Border.all(color: Colors.white, width: 4),
-          boxShadow: [
-            // Resplandor suave que indica interactividad
-            BoxShadow(
-              color: AppColors.alert.withOpacity(0.35),
-              blurRadius: 24,
-              spreadRadius: 1,
-              offset: const Offset(0, 6),
-            ),
-            BoxShadow(
-              color: AppColors.primary.withOpacity(0.08),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        // Cruz blanca minimalista: urgencia médica sin alarmismo
-        child: const Icon(Icons.add_rounded, color: Colors.white, size: 34),
-      ),
-    );
-  }
-}
-
-// ── Bottom Navigation ─────────────────────────────────────────────────────────
-
-class _BottomBar extends StatelessWidget {
-  final int currentIndex;
-  final bool showFab;
-  final ValueChanged<int> onTap;
-
-  const _BottomBar({
-    required this.currentIndex,
-    required this.showFab,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final items = [
-      (Icons.home_outlined, 'Inicio'),
-      (Icons.search_outlined, 'Médicos'),
-      (Icons.calendar_month_outlined, 'Citas'),
-      (Icons.person_outline_rounded, 'Perfil'),
-    ];
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: const Border(top: BorderSide(color: AppColors.cardBorder)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.06),
-            blurRadius: 20,
-            offset: const Offset(0, -4),
-          ),
+        onCenterTap: _role == 'patient' ? _onBotonRojo : null,
+        centerIcon: Icons.emergency_rounded,
+        items: const [
+          (Icons.home_outlined, Icons.home_rounded, 'Inicio'),
+          (Icons.search_outlined, Icons.search_rounded, 'Médicos'),
+          (Icons.calendar_month_outlined, Icons.calendar_month_rounded, 'Citas'),
+          (Icons.person_outline_rounded, Icons.person_rounded, 'Perfil'),
         ],
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(8, 8, 8, showFab ? 0 : 8),
-          child: showFab
-              ? _buildWithFabSlot(items)
-              : _buildNormal(items),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNormal(List<(IconData, String)> items) {
-    return Row(
-      children: List.generate(items.length, (i) => _NavItem(
-        icon: items[i].$1,
-        label: items[i].$2,
-        selected: currentIndex == i,
-        onTap: () => onTap(i),
-      )),
-    );
-  }
-
-  Widget _buildWithFabSlot(List<(IconData, String)> items) {
-    // Índices 0,1 a la izquierda | slot FAB | índices 2,3 a la derecha
-    return Row(
-      children: [
-        _NavItem(
-          icon: items[0].$1,
-          label: items[0].$2,
-          selected: currentIndex == 0,
-          onTap: () => onTap(0),
-        ),
-        _NavItem(
-          icon: items[1].$1,
-          label: items[1].$2,
-          selected: currentIndex == 1,
-          onTap: () => onTap(1),
-        ),
-        // Slot del botón Urgente: etiqueta bajo el FAB flotante
-        const SizedBox(
-          width: 72,
-          child: Padding(
-            padding: EdgeInsets.only(top: 36),
-            child: Text(
-              'Urgente',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: AppColors.alert,
-              ),
-            ),
-          ),
-        ),
-        _NavItem(
-          icon: items[2].$1,
-          label: items[2].$2,
-          selected: currentIndex == 2,
-          onTap: () => onTap(2),
-        ),
-        _NavItem(
-          icon: items[3].$1,
-          label: items[3].$2,
-          selected: currentIndex == 3,
-          onTap: () => onTap(3),
-        ),
-      ],
-    );
-  }
-}
-
-class _NavItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _NavItem({
-    required this.icon,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: selected
-                ? AppColors.primaryLight.withOpacity(0.1)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 24,
-                color: selected ? AppColors.primaryLight : AppColors.textHint,
-              ),
-              const SizedBox(height: 3),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight:
-                      selected ? FontWeight.w700 : FontWeight.w400,
-                  color:
-                      selected ? AppColors.primaryLight : AppColors.textHint,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
