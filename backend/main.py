@@ -195,7 +195,7 @@ else:
     <h1>Salud<span>En</span>Línea</h1>
     <p>Consultas médicas por video con profesionales certificados, expediente clínico digital,
        atención urgente 24/7 y farmacia con entrega a domicilio — desde tu celular, en Costa Rica.</p>
-    <a class="btn" href="https://github.com/yermari2308/saludenlinea/releases/latest">📲 Descargar app (Android)</a>
+    <a class="btn" href="/descargar">📲 Descargar app (Android)</a>
   </section>
   <section class="features">
     <div class="card"><div class="ic">🎥</div><h3>Videoconsultas</h3>
@@ -221,3 +221,29 @@ else:
     @app.get("/", response_class=HTMLResponse, include_in_schema=False)
     def landing():
         return _LANDING
+
+    @app.get("/descargar", include_in_schema=False)
+    def descargar_apk():
+        """
+        Redirige directo al .apk del último release de GitHub, sin pasar
+        por la página HTML del release (que en algunos navegadores/apps
+        embebidas como WhatsApp exige iniciar sesión en GitHub aunque el
+        archivo sea público).
+        """
+        import requests
+        from fastapi.responses import RedirectResponse
+
+        fallback = "https://github.com/yermari2308/saludenlinea/releases/latest/download/SaludEnLinea.apk"
+        try:
+            r = requests.get(
+                "https://api.github.com/repos/yermari2308/saludenlinea/releases/latest",
+                timeout=8,
+            )
+            r.raise_for_status()
+            assets = r.json().get("assets", [])
+            apk = next((a for a in assets if a["name"].endswith(".apk")), None)
+            url = apk["browser_download_url"] if apk else fallback
+        except Exception as e:
+            logger.warning("No se pudo resolver el release más reciente: %s", e)
+            url = fallback
+        return RedirectResponse(url=url, status_code=302)
