@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
+import '../design_system.dart';
 import '../services/api_service.dart';
 import 'cart_screen.dart';
 import 'pharmacy_orders_screen.dart';
 
+/// Farmacia — Design System 2.0. Lienzo papel, floating search, chips de
+/// tinta, product cards con línea base fija precio/acción.
 class PharmacyScreen extends StatefulWidget {
   const PharmacyScreen({super.key});
 
@@ -19,7 +22,6 @@ class _PharmacyScreenState extends State<PharmacyScreen> {
   String _query = '';
   final _searchCtrl = TextEditingController();
 
-  /// Filtrado local instantáneo por nombre o descripción
   List<Map<String, dynamic>> get _visibles {
     if (_query.isEmpty) return _productos;
     final q = _query.toLowerCase();
@@ -74,195 +76,165 @@ class _PharmacyScreenState extends State<PharmacyScreen> {
       await ApiService.addToCart(p['id'] as int);
       if (!mounted) return;
       setState(() => _cartCount++);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${p['nombre']} agregado al carrito'),
-          backgroundColor: AppColors.accentDark,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 1),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('${p['nombre']} agregado al carrito'),
+        backgroundColor: DSColors.ink,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 1),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: AppColors.error),
-      );
+          SnackBar(content: Text(e.toString()), backgroundColor: DSColors.coral));
     }
   }
 
   Future<void> _abrirCarrito() async {
-    await Navigator.push(
-        context, MaterialPageRoute(builder: (_) => const CartScreen()));
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen()));
     _load();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Farmacia',
-            style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white)),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.receipt_long_rounded),
-            tooltip: 'Mis pedidos',
-            onPressed: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const PharmacyOrdersScreen())),
-          ),
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.shopping_cart_rounded),
-                tooltip: 'Carrito',
-                onPressed: _abrirCarrito,
-              ),
-              if (_cartCount > 0)
-                Positioned(
-                  top: 8,
-                  right: 6,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                        color: AppColors.error, shape: BoxShape.circle),
-                    child: Text(
-                      '$_cartCount',
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w800),
+      backgroundColor: DSColors.canvas,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // ── Título + accesos ─────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(DS.s2, DS.s2, DS.s2, DS.s1),
+              child: Row(
+                children: [
+                  const Expanded(child: Text('Farmacia', style: DSText.title)),
+                  DSPressable(
+                    onTap: () => Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const PharmacyOrdersScreen())),
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      margin: const EdgeInsets.only(right: 8),
+                      decoration: BoxDecoration(
+                          color: DSColors.surface, shape: BoxShape.circle, boxShadow: DSElevation.rest),
+                      child: const Icon(Icons.receipt_long_rounded, size: 19, color: DSColors.textMid),
                     ),
                   ),
-                ),
-            ],
-          ),
-          const SizedBox(width: 4),
-        ],
-      ),
-      body: Column(
-        children: [
-          // ── Buscador de productos ──────────────────────────────────────────
-          Container(
-            color: AppColors.primary,
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-            child: Container(
-              height: 44,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.10),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+                  DSPressable(
+                    onTap: _abrirCarrito,
+                    child: Stack(clipBehavior: Clip.none, children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                            color: DSColors.surface, shape: BoxShape.circle, boxShadow: DSElevation.rest),
+                        child: const Icon(Icons.shopping_bag_outlined, size: 19, color: DSColors.textMid),
+                      ),
+                      if (_cartCount > 0)
+                        Positioned(
+                          top: -4, right: -4,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(color: DSColors.coral, shape: BoxShape.circle),
+                            child: Text('$_cartCount',
+                                style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800)),
+                          ),
+                        ),
+                    ]),
                   ),
                 ],
               ),
-              child: TextField(
-                controller: _searchCtrl,
-                style:
-                    const TextStyle(color: AppColors.textPrimary, fontSize: 14),
-                decoration: InputDecoration(
-                  hintText: 'Buscar medicamento o producto…',
-                  hintStyle:
-                      const TextStyle(color: AppColors.textHint, fontSize: 14),
-                  prefixIcon: const Icon(Icons.search_rounded,
-                      color: AppColors.primaryLight, size: 22),
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                  suffixIcon: _query.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.close_rounded,
-                              color: AppColors.textHint, size: 18),
-                          onPressed: () {
-                            _searchCtrl.clear();
-                            setState(() => _query = '');
-                          },
-                        )
-                      : null,
+            ),
+            // ── Floating search ──────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: DS.s2),
+              child: Container(
+                height: 50,
+                decoration: BoxDecoration(
+                  color: DSColors.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: DSElevation.float,
                 ),
-                onChanged: (v) => setState(() => _query = v.trim()),
+                child: TextField(
+                  controller: _searchCtrl,
+                  style: const TextStyle(color: DSColors.textStrong, fontSize: 15),
+                  decoration: InputDecoration(
+                    hintText: 'Buscar medicamento o producto…',
+                    hintStyle: const TextStyle(color: DSColors.textFaint, fontSize: 14),
+                    prefixIcon: const Icon(Icons.search_rounded, color: DSColors.mint, size: 22),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 13),
+                    suffixIcon: _query.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.close_rounded, color: DSColors.textFaint, size: 18),
+                            onPressed: () { _searchCtrl.clear(); setState(() => _query = ''); },
+                          )
+                        : null,
+                  ),
+                  onChanged: (v) => setState(() => _query = v.trim()),
+                ),
               ),
             ),
-          ),
-          // ── Categorías ─────────────────────────────────────────────────────
-          Container(
-            color: AppColors.primary,
-            padding: const EdgeInsets.fromLTRB(12, 0, 12, 14),
-            child: SizedBox(
-              height: 36,
+            const SizedBox(height: DS.s2),
+            // ── Categorías (píldoras de tinta) ───────────────────────────
+            SizedBox(
+              height: 38,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: DS.s2),
                 itemCount: _categorias.length,
                 separatorBuilder: (_, __) => const SizedBox(width: 8),
                 itemBuilder: (_, i) {
                   final (id, label, icon) = _categorias[i];
                   final selected = _categoria == id;
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() => _categoria = id);
-                      _load();
-                    },
+                  return DSPressable(
+                    onTap: () { setState(() => _categoria = id); _load(); },
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14),
+                      alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: selected ? Colors.white : Colors.white.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(20),
+                        color: selected ? DSColors.ink : DSColors.surface,
+                        borderRadius: BorderRadius.circular(100),
+                        boxShadow: selected ? [] : DSElevation.rest,
                       ),
-                      child: Row(
-                        children: [
-                          Icon(icon,
-                              size: 15,
-                              color: selected ? AppColors.primary : Colors.white),
-                          const SizedBox(width: 6),
-                          Text(
-                            label,
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(icon, size: 15, color: selected ? DSColors.mint : DSColors.textMid),
+                        const SizedBox(width: 6),
+                        Text(label,
                             style: TextStyle(
-                              color: selected ? AppColors.primary : Colors.white,
-                              fontSize: 12,
-                              fontWeight:
-                                  selected ? FontWeight.w700 : FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
+                                color: selected ? Colors.white : DSColors.textMid,
+                                fontSize: 12.5,
+                                fontWeight: selected ? FontWeight.w800 : FontWeight.w600)),
+                      ]),
                     ),
                   );
                 },
               ),
             ),
-          ),
-          // ── Productos ──────────────────────────────────────────────────────
-          Expanded(
-            child: _loading
-                ? const Center(
-                    child: CircularProgressIndicator(color: AppColors.primaryLight))
-                : _visibles.isEmpty
-                    ? _buildEmpty()
-                    : RefreshIndicator(
-                        onRefresh: _load,
-                        child: ListView.separated(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _visibles.length + 1,
-                          separatorBuilder: (_, __) => const SizedBox(height: 10),
-                          itemBuilder: (_, i) {
-                            if (i == 0) return const _AvisoLegalFarmacia();
-                            return _ProductCard(
-                              producto: _visibles[i - 1],
-                              onAdd: () => _agregar(_visibles[i - 1]),
-                            );
-                          },
+            const SizedBox(height: DS.s1),
+            // ── Productos ─────────────────────────────────────────────────
+            Expanded(
+              child: _loading
+                  ? ListView(children: const [SkeletonCard(), SkeletonCard(), SkeletonCard()])
+                  : _visibles.isEmpty
+                      ? _buildEmpty()
+                      : RefreshIndicator(
+                          onRefresh: _load,
+                          color: DSColors.mint,
+                          child: ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(DS.s2, 0, DS.s2, 120),
+                            itemCount: _visibles.length + 1,
+                            separatorBuilder: (_, __) => const SizedBox(height: DS.s1),
+                            itemBuilder: (_, i) {
+                              if (i == 0) return const _AvisoLegalFarmacia();
+                              return _ProductCard(
+                                producto: _visibles[i - 1],
+                                onAdd: () => _agregar(_visibles[i - 1]),
+                              );
+                            },
+                          ),
                         ),
-                      ),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -271,19 +243,16 @@ class _PharmacyScreenState extends State<PharmacyScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight.withOpacity(0.08),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.local_pharmacy_rounded,
-                  size: 48, color: AppColors.primaryLight),
+            SizedBox(
+              width: 100, height: 100,
+              child: Stack(alignment: Alignment.center, children: [
+                Container(width: 100, height: 100,
+                    decoration: const BoxDecoration(color: DSColors.mintSoft, shape: BoxShape.circle)),
+                const Icon(Icons.local_pharmacy_rounded, size: 40, color: DSColors.mint),
+              ]),
             ),
-            const SizedBox(height: 16),
-            const Text('No hay productos en esta categoría',
-                style: TextStyle(
-                    fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+            const SizedBox(height: DS.s2),
+            const Text('Sin productos en esta categoría', style: DSText.headline),
           ],
         ),
       );
@@ -294,25 +263,22 @@ class _AvisoLegalFarmacia extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(DS.s2),
         decoration: BoxDecoration(
-          color: const Color(0xFFEFF6FF),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFF2563EB).withOpacity(0.2)),
+          color: DSColors.brandSoft,
+          borderRadius: DSRadius.rSm,
         ),
         child: const Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.verified_user_rounded,
-                size: 18, color: Color(0xFF2563EB)),
+            Icon(Icons.verified_user_rounded, size: 18, color: DSColors.brand),
             SizedBox(width: 10),
             Expanded(
               child: Text(
                 'Los medicamentos son despachados por una farmacia aliada autorizada, '
                 'bajo supervisión de un regente farmacéutico. Los antibióticos y '
                 'psicotrópicos requieren Receta Digital del Ministerio de Salud.',
-                style: TextStyle(
-                    fontSize: 11.5, color: Color(0xFF1E40AF), height: 1.4),
+                style: TextStyle(fontSize: 11.5, color: DSColors.brand, height: 1.4),
               ),
             ),
           ],
@@ -332,107 +298,46 @@ class _ProductCard extends StatelessWidget {
     final stock = producto['stock'] as int? ?? 0;
     final precio = (producto['precio'] as num?)?.toDouble() ?? 0;
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [AppTheme.cardShadow],
-      ),
+    return DSCard(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: AppColors.primaryLight.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.medication_rounded,
-                color: AppColors.primaryLight, size: 26),
+            width: 52, height: 52,
+            decoration: BoxDecoration(color: DSColors.mintSoft, borderRadius: DSRadius.rSm),
+            child: const Icon(Icons.medication_rounded, color: DSColors.mint, size: 26),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: DS.s2),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  producto['nombre'] as String? ?? '',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                      color: AppColors.textPrimary),
-                ),
+                Text(producto['nombre'] as String? ?? '', style: DSText.headline),
                 const SizedBox(height: 3),
-                Text(
-                  producto['descripcion'] as String? ?? '',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontSize: 12, color: AppColors.textSecondary, height: 1.3),
-                ),
-                const SizedBox(height: 10),
-                // Línea base fija: precio + badges a la izquierda, acción a la derecha
+                Text(producto['descripcion'] as String? ?? '',
+                    maxLines: 2, overflow: TextOverflow.ellipsis, style: DSText.label),
+                const SizedBox(height: DS.s1),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Text(
-                      '\$${precio.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 16,
-                          color: AppColors.primaryLight),
-                    ),
+                    Text('\$${precio.toStringAsFixed(2)}', style: DSText.mono.copyWith(fontSize: 17)),
                     const SizedBox(width: 8),
                     if (requiereReceta)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          // Naranja suave: distintivo sin alarmar
-                          color: const Color(0xFFFFF1E6),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                              color: const Color(0xFFC2410C).withOpacity(0.25)),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.description_rounded,
-                                size: 11, color: Color(0xFFC2410C)),
-                            SizedBox(width: 4),
-                            Text('Requiere receta',
-                                style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                    color: Color(0xFFC2410C))),
-                          ],
-                        ),
-                      ),
+                      const DSChip(label: 'Requiere receta', color: Color(0xFFF97316), icon: Icons.description_rounded),
                     if (stock == 0) ...[
                       const SizedBox(width: 8),
-                      const Text('Agotado',
-                          style: TextStyle(
-                              fontSize: 11,
-                              color: AppColors.error,
-                              fontWeight: FontWeight.w600)),
+                      const DSChip(label: 'Agotado', color: DSColors.coral),
                     ],
                     const Spacer(),
-                    GestureDetector(
+                    DSPressable(
                       onTap: stock > 0 ? onAdd : null,
                       child: Container(
-                        // Objetivo táctil 44x44 (WCAG)
-                        width: 44,
-                        height: 44,
+                        width: 40, height: 40,
                         decoration: BoxDecoration(
-                          color: stock > 0
-                              ? AppColors.accentDark
-                              : AppColors.cardBorder,
+                          color: stock > 0 ? DSColors.mint : DSColors.line,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.add_shopping_cart_rounded,
-                            color: Colors.white, size: 19),
+                        child: const Icon(Icons.add_rounded, color: Colors.white, size: 22),
                       ),
                     ),
                   ],
