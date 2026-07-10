@@ -14,6 +14,10 @@ class DoctorPatientsScreen extends StatefulWidget {
   State<DoctorPatientsScreen> createState() => _DoctorPatientsScreenState();
 }
 
+/// Número de serie único del expediente, derivado del id del paciente.
+String serieExpediente(int pacienteId) =>
+    'EXP-${pacienteId.toString().padLeft(6, '0')}';
+
 class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
   List<Map<String, dynamic>> _pacientes = [];
   bool _loading = true;
@@ -38,10 +42,21 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
 
   List<Map<String, dynamic>> get _filtrados {
     if (_busqueda.isEmpty) return _pacientes;
-    final q = _busqueda.toLowerCase();
-    return _pacientes
-        .where((p) => (p['nombre'] as String).toLowerCase().contains(q))
-        .toList();
+    final q = _busqueda.toLowerCase().trim();
+    // Normalizar para búsqueda por N° de expediente: "EXP-000042", "exp42", "42"
+    final qSerie = q.replaceAll(RegExp(r'[^0-9]'), '');
+    return _pacientes.where((p) {
+      final nombre = (p['nombre'] as String).toLowerCase();
+      if (nombre.contains(q)) return true;
+      final id = p['paciente_id'] as int;
+      final serie = serieExpediente(id).toLowerCase();
+      if (serie.contains(q)) return true;
+      // Coincidencia por dígitos del número de serie
+      if (qSerie.isNotEmpty && id.toString() == qSerie.replaceFirst(RegExp(r'^0+'), '')) {
+        return true;
+      }
+      return false;
+    }).toList();
   }
 
   @override
@@ -68,7 +83,7 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
               child: TextField(
                 style: const TextStyle(color: Colors.white, fontSize: 14),
                 decoration: InputDecoration(
-                  hintText: 'Buscar paciente…',
+                  hintText: 'Nombre o N° de expediente (EXP-000123)…',
                   hintStyle: TextStyle(
                       color: Colors.white.withOpacity(0.5), fontSize: 14),
                   prefixIcon: const Icon(Icons.search_rounded,
@@ -174,10 +189,31 @@ class _PacienteCard extends StatelessWidget {
                           fontSize: 14,
                           color: AppColors.textPrimary)),
                   const SizedBox(height: 3),
-                  Text(
-                    '$totalCitas consulta${totalCitas == 1 ? '' : 's'}',
-                    style: const TextStyle(
-                        fontSize: 12, color: AppColors.textSecondary),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryLight.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          serieExpediente(paciente['paciente_id'] as int),
+                          style: const TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.3,
+                              color: AppColors.primaryLight),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '$totalCitas consulta${totalCitas == 1 ? '' : 's'}',
+                        style: const TextStyle(
+                            fontSize: 12, color: AppColors.textSecondary),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -333,6 +369,10 @@ class _DoctorPatientDetailScreenState extends State<DoctorPatientDetailScreen> {
               titulo: 'CONTACTO',
               child: Column(
                 children: [
+                  _DatoRow(
+                      icon: Icons.badge_rounded,
+                      valor:
+                          'Expediente N° ${serieExpediente(widget.paciente['paciente_id'] as int)}'),
                   _DatoRow(
                       icon: Icons.email_rounded,
                       valor: widget.paciente['email'] as String? ?? ''),

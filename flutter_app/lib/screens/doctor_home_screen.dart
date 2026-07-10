@@ -162,6 +162,21 @@ class _DoctorInicioTabState extends State<_DoctorInicioTab> {
     _cargarUrgente();
   }
 
+  String _saludoHora() {
+    final h = DateTime.now().hour;
+    if (h < 12) return 'Buenos días,';
+    if (h < 18) return 'Buenas tardes,';
+    return 'Buenas noches,';
+  }
+
+  String _fechaHoy() {
+    const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+        'julio', 'agosto', 'setiembre', 'octubre', 'noviembre', 'diciembre'];
+    final f = DateTime.now();
+    return '${dias[f.weekday - 1]} ${f.day} de ${meses[f.month - 1]}';
+  }
+
   void _cargarDatos() {
     _citasFuture = ApiService.getAppointments();
     ApiService.getUserInfo().then((info) {
@@ -437,18 +452,28 @@ class _DoctorInicioTabState extends State<_DoctorInicioTab> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      const Text('Panel Médico',
+                      Text(_saludoHora(),
                           style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.3,
-                          )),
+                              color: Colors.white.withOpacity(0.65),
+                              fontSize: 13)),
+                      const SizedBox(height: 2),
+                      Text(
+                        _nombreDoctor.isNotEmpty
+                            ? 'Dr. $_nombreDoctor'
+                            : 'Panel Médico',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.4,
+                        ),
+                      ),
                       const SizedBox(height: 3),
                       Text(
-                        _nombreDoctor.isNotEmpty ? 'Dr. $_nombreDoctor' : 'Bienvenido',
+                        _fechaHoy(),
                         style: TextStyle(
-                            color: Colors.white.withOpacity(0.65), fontSize: 13),
+                            color: Colors.white.withOpacity(0.5),
+                            fontSize: 12),
                       ),
                     ],
                   ),

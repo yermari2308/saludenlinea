@@ -249,6 +249,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           // ── Banner Expediente Clínico ──────────────────────────────────
           _ExpedienteBanner(
             pct: _expedientePct,
+            serie: _patient != null
+                ? 'EXP-${_patient!.id.toString().padLeft(6, '0')}'
+                : '',
             onTap: () async {
               await Navigator.push(
                 context,
@@ -709,9 +712,11 @@ class _HraBanner extends StatelessWidget {
 
 class _ExpedienteBanner extends StatelessWidget {
   final int pct;
+  final String serie;
   final VoidCallback onTap;
 
-  const _ExpedienteBanner({required this.pct, required this.onTap});
+  const _ExpedienteBanner(
+      {required this.pct, required this.serie, required this.onTap});
 
   Color get _barColor {
     if (pct >= 80) return AppColors.accentDark;
@@ -753,13 +758,36 @@ class _ExpedienteBanner extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Expediente clínico',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                      color: AppColors.textPrimary,
-                    ),
+                  Row(
+                    children: [
+                      const Text(
+                        'Expediente clínico',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      if (serie.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 1.5),
+                          decoration: BoxDecoration(
+                            color: _barColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            serie,
+                            style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.3,
+                                color: _barColor),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 5),
                   ClipRRect(
