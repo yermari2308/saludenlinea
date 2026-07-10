@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../app_theme.dart';
+import '../design_system.dart';
 import '../services/api_service.dart';
 import 'chat_screen.dart';
 
+/// Sala de espera — Design System 2.0. Ink hero con pulso de "sala lista",
+/// CTA flotante en vez de botón embebido en el scroll.
 class ConsultationScreen extends StatefulWidget {
   final int appointmentId;
   const ConsultationScreen({super.key, required this.appointmentId});
@@ -12,16 +14,25 @@ class ConsultationScreen extends StatefulWidget {
   State<ConsultationScreen> createState() => _ConsultationScreenState();
 }
 
-class _ConsultationScreenState extends State<ConsultationScreen> {
+class _ConsultationScreenState extends State<ConsultationScreen>
+    with SingleTickerProviderStateMixin {
   bool _loading = true;
   String? _jitsiUrl;
   String? _error;
   bool _finalizada = false;
+  late final AnimationController _pulse = AnimationController(
+    vsync: this, duration: const Duration(milliseconds: 1600))..repeat();
 
   @override
   void initState() {
     super.initState();
     _loadSession();
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
   }
 
   Future<void> _loadSession() async {
@@ -69,14 +80,12 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
         await launchUrl(uri, mode: LaunchMode.platformDefault);
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('No se pudo abrir: $e'),
-              backgroundColor: AppColors.error,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          );
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('No se pudo abrir: $e'),
+            backgroundColor: DSColors.coral,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ));
         }
       }
     }
@@ -85,72 +94,41 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Videoconsulta'),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
+      backgroundColor: DSColors.canvas,
+      body: SafeArea(
+        child: _loading
+            ? const Center(child: CircularProgressIndicator(color: DSColors.brand))
+            : _finalizada
+                ? _buildFinalizada()
+                : _error != null
+                    ? _buildError()
+                    : _buildReady(),
       ),
-      body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primaryLight))
-          : _finalizada
-              ? _buildFinalizada()
-              : _error != null
-                  ? _buildError()
-                  : _buildReady(),
     );
   }
 
   Widget _buildFinalizada() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(DS.s3),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                color: AppColors.accentDark.withOpacity(0.12),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.check_circle_rounded,
-                  size: 54, color: AppColors.accentDark),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Consulta Finalizada',
-              style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary),
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              'Esta consulta fue completada. Revisa "Mis Citas" para ver tu receta.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  color: AppColors.textSecondary, fontSize: 14, height: 1.5),
-            ),
-            const SizedBox(height: 32),
             SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryLight,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                ),
-                child: const Text('Volver a mis citas',
-                    style: TextStyle(fontWeight: FontWeight.w700)),
-              ),
+              width: 108, height: 108,
+              child: Stack(alignment: Alignment.center, children: [
+                Container(width: 108, height: 108,
+                    decoration: const BoxDecoration(color: DSColors.mintSoft, shape: BoxShape.circle)),
+                const Icon(Icons.check_rounded, size: 48, color: DSColors.mint),
+              ]),
             ),
+            const SizedBox(height: DS.s3),
+            const Text('Consulta finalizada', style: DSText.title),
+            const SizedBox(height: 8),
+            const Text('Esta consulta fue completada. Revisá "Mis citas" para ver tu receta.',
+                textAlign: TextAlign.center, style: DSText.body),
+            const SizedBox(height: DS.s4),
+            DSButton(label: 'Volver a mis citas', color: DSColors.ink, onTap: () => Navigator.pop(context)),
           ],
         ),
       ),
@@ -160,34 +138,19 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
   Widget _buildError() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(DS.s3),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppColors.error.withOpacity(0.08),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.error_outline_rounded,
-                  size: 48, color: AppColors.error),
+              decoration: BoxDecoration(color: DSColors.coral.withOpacity(0.08), shape: BoxShape.circle),
+              child: const Icon(Icons.error_outline_rounded, size: 44, color: DSColors.coral),
             ),
-            const SizedBox(height: 16),
-            Text(_error!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                    color: AppColors.textSecondary, fontSize: 14)),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _loadSession,
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryLight,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12))),
-              child: const Text('Reintentar'),
-            ),
+            const SizedBox(height: DS.s2),
+            Text(_error!, textAlign: TextAlign.center, style: DSText.body),
+            const SizedBox(height: DS.s3),
+            DSButton(label: 'Reintentar', expanded: false, onTap: _loadSession),
           ],
         ),
       ),
@@ -195,262 +158,117 @@ class _ConsultationScreenState extends State<ConsultationScreen> {
   }
 
   Widget _buildReady() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
-      child: Column(
-        children: [
-          // Hero icon
-          Container(
-            width: 96,
-            height: 96,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppColors.primaryLight, AppColors.primary],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primaryLight.withOpacity(0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: const Icon(Icons.videocam_rounded, size: 48, color: Colors.white),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'Tu sala está lista',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: AppColors.textPrimary,
-              letterSpacing: -0.3,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'La videollamada se abrirá en otra app. Permite acceso a cámara y micrófono.',
-            style: TextStyle(
-                color: AppColors.textSecondary, fontSize: 14, height: 1.5),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 32),
-          // Pasos
-          _buildPasos(),
-          const SizedBox(height: 32),
-          // Botón principal
-          SizedBox(
-            width: double.infinity,
-            child: GestureDetector(
-              onTap: _abrirVideollamada,
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 18),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppColors.accent, AppColors.accentDark],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+    return Stack(
+      children: [
+        ListView(
+          padding: const EdgeInsets.fromLTRB(DS.s2, DS.s2, DS.s2, 140),
+          children: [
+            // ── Hero de tinta con pulso "sala lista" ─────────────────────
+            DSInkCard(
+              padding: const EdgeInsets.all(DS.s4),
+              child: Column(
+                children: [
+                  SizedBox(
+                    width: 96, height: 96,
+                    child: AnimatedBuilder(
+                      animation: _pulse,
+                      builder: (_, __) => Stack(alignment: Alignment.center, children: [
+                        for (final delay in [0.0, 0.5])
+                          Builder(builder: (_) {
+                            final t = (_pulse.value + delay) % 1.0;
+                            return Opacity(
+                              opacity: (1 - t) * 0.5,
+                              child: Container(
+                                width: 60 + t * 60,
+                                height: 60 + t * 60,
+                                decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: DSColors.mint, width: 1.5)),
+                              ),
+                            );
+                          }),
+                        Container(
+                          width: 60, height: 60,
+                          decoration: const BoxDecoration(color: DSColors.mint, shape: BoxShape.circle),
+                          child: const Icon(Icons.videocam_rounded, color: Colors.white, size: 28),
+                        ),
+                      ]),
+                    ),
                   ),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.accent.withOpacity(0.35),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.video_call_rounded, color: Colors.white, size: 26),
-                    SizedBox(width: 10),
-                    Text(
-                      'Entrar a la consulta',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800),
-                    ),
-                  ],
-                ),
+                  const SizedBox(height: DS.s3),
+                  const Text('Tu sala está lista',
+                      style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w800, letterSpacing: -0.4)),
+                  const SizedBox(height: 6),
+                  Text('La videollamada se abre en otra app · cámara y micrófono',
+                      style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12.5),
+                      textAlign: TextAlign.center),
+                  const SizedBox(height: DS.s2),
+                  const DSChip(label: 'CIFRADO DE EXTREMO A EXTREMO', color: DSColors.mint, icon: Icons.lock_rounded),
+                ],
               ),
             ),
-          ),
-          const SizedBox(height: 12),
-          // Chat integrado: coordinar sin entrar a la videollamada
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
-              label: const Text('Chat de la consulta'),
-              onPressed: _abrirChat,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.primaryLight,
-                side: BorderSide(
-                    color: AppColors.primaryLight.withOpacity(0.4)),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Volver a mis citas',
-                style: TextStyle(color: AppColors.textSecondary)),
-          ),
-          const SizedBox(height: 20),
-          // Nota Jitsi
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppColors.primaryLight.withOpacity(0.06),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Row(
+            const SizedBox(height: DS.s3),
+            const DSSectionHeader(title: 'Cómo funciona'),
+            Row(
               children: [
-                Icon(Icons.lock_rounded, color: AppColors.primaryLight, size: 18),
-                SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Videollamada segura y cifrada. No necesitas crear cuenta.',
-                    style: TextStyle(
-                        color: AppColors.textSecondary, fontSize: 12, height: 1.4),
-                  ),
-                ),
+                Expanded(child: _PasoChip(icon: Icons.touch_app_rounded, texto: 'Tocá Entrar')),
+                const SizedBox(width: 8),
+                Expanded(child: _PasoChip(icon: Icons.camera_alt_rounded, texto: 'Permití cámara')),
+                const SizedBox(width: 8),
+                Expanded(child: _PasoChip(icon: Icons.check_circle_outline_rounded, texto: 'Recetá al final')),
               ],
             ),
+            const SizedBox(height: DS.s2),
+            DSCard(
+              onTap: _abrirChat,
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(9),
+                    decoration: BoxDecoration(color: DSColors.brandSoft, shape: BoxShape.circle),
+                    child: const Icon(Icons.chat_bubble_rounded, color: DSColors.brand, size: 18),
+                  ),
+                  const SizedBox(width: DS.s2),
+                  const Expanded(
+                    child: Text('Chat de la consulta', style: DSText.headline),
+                  ),
+                  const Icon(Icons.arrow_forward_ios_rounded, size: 13, color: DSColors.textFaint),
+                ],
+              ),
+            ),
+          ],
+        ),
+        // ── CTA flotante ────────────────────────────────────────────────
+        Positioned(
+          left: DS.s2, right: DS.s2, bottom: DS.s2,
+          child: DSButton(
+            label: 'Entrar a la consulta',
+            icon: Icons.video_call_rounded,
+            color: DSColors.mint,
+            onTap: _abrirVideollamada,
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPasos() {
-    final pasos = [
-      (Icons.touch_app_rounded, 'Toca "Entrar a la consulta"',
-          'La sala de video se abrirá automáticamente.'),
-      (Icons.camera_alt_rounded, 'Permite cámara y micrófono',
-          'Acepta los permisos para que el médico pueda verte.'),
-      (Icons.access_time_rounded, 'Espera al médico',
-          'Permanece en la sala, el médico entrará en breve.'),
-      (Icons.check_circle_outline_rounded, 'Al terminar',
-          'Cierra la pestaña. Tu receta aparecerá en Mis Citas.'),
-    ];
-
-    return Column(
-      children: pasos
-          .asMap()
-          .entries
-          .map((e) => _PasoTile(
-                numero: (e.key + 1).toString(),
-                icon: e.value.$1,
-                titulo: e.value.$2,
-                descripcion: e.value.$3,
-                isLast: e.key == pasos.length - 1,
-              ))
-          .toList(),
+        ),
+      ],
     );
   }
 }
 
-class _PasoTile extends StatelessWidget {
-  final String numero;
+class _PasoChip extends StatelessWidget {
   final IconData icon;
-  final String titulo;
-  final String descripcion;
-  final bool isLast;
-
-  const _PasoTile({
-    required this.numero,
-    required this.icon,
-    required this.titulo,
-    required this.descripcion,
-    this.isLast = false,
-  });
+  final String texto;
+  const _PasoChip({required this.icon, required this.texto});
 
   @override
-  Widget build(BuildContext context) {
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Column(
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [AppColors.primaryLight, AppColors.primary],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    numero,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 13),
-                  ),
-                ),
-              ),
-              if (!isLast)
-                Expanded(
-                  child: Container(
-                    width: 1.5,
-                    color: AppColors.cardBorder,
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(bottom: isLast ? 0 : 20),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 6),
-                        Text(titulo,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
-                                color: AppColors.textPrimary)),
-                        const SizedBox(height: 3),
-                        Text(descripcion,
-                            style: const TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 12,
-                                height: 1.4)),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Icon(icon, color: AppColors.accent, size: 20),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(vertical: DS.s2, horizontal: 8),
+        decoration: BoxDecoration(color: DSColors.surface, borderRadius: DSRadius.rSm, boxShadow: DSElevation.rest),
+        child: Column(
+          children: [
+            Icon(icon, color: DSColors.brand, size: 22),
+            const SizedBox(height: 8),
+            Text(texto, textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: DSColors.textStrong)),
+          ],
+        ),
+      );
 }
