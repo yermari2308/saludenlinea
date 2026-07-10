@@ -225,7 +225,6 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
   List<Map<String, dynamic>> get _filtrados {
     if (_busqueda.isEmpty) return _pacientes;
     final q = _busqueda.toLowerCase().trim();
-    // Normalizar para búsqueda por N° de expediente: "EXP-000042", "exp42", "42"
     final qSerie = q.replaceAll(RegExp(r'[^0-9]'), '');
     return _pacientes.where((p) {
       final nombre = (p['nombre'] as String).toLowerCase();
@@ -233,7 +232,6 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
       final id = p['paciente_id'] as int;
       final serie = serieExpediente(id).toLowerCase();
       if (serie.contains(q)) return true;
-      // Coincidencia por dígitos del número de serie
       if (qSerie.isNotEmpty && id.toString() == qSerie.replaceFirst(RegExp(r'^0+'), '')) {
         return true;
       }
@@ -244,67 +242,73 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Mis pacientes',
-            style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white)),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(60),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: Container(
-              height: 42,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: TextField(
-                style: const TextStyle(color: Colors.white, fontSize: 14),
-                decoration: InputDecoration(
-                  hintText: 'Nombre o N° de expediente (EXP-000123)…',
-                  hintStyle: TextStyle(
-                      color: Colors.white.withOpacity(0.5), fontSize: 14),
-                  prefixIcon: const Icon(Icons.search_rounded,
-                      color: Colors.white60, size: 20),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                ),
-                onChanged: (v) => setState(() => _busqueda = v),
-              ),
-            ),
-          ),
-        ),
-      ),
-      body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primaryLight))
-          : _filtrados.isEmpty
-              ? _buildEmpty()
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: ListView.separated(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _filtrados.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (_, i) => _PacienteCard(
-                      paciente: _filtrados[i],
-                      onTap: () async {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                DoctorPatientDetailScreen(paciente: _filtrados[i]),
-                          ),
-                        );
-                        _load();
-                      },
+      backgroundColor: DSColors.canvas,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(DS.s2, DS.s2, DS.s2, DS.s1),
+              child: Row(
+                children: [
+                  const Expanded(child: Text('Mis pacientes', style: DSText.title)),
+                  DSPressable(
+                    onTap: () => mostrarCommandPalette(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(color: DSColors.ink, shape: BoxShape.circle, boxShadow: DSElevation.rest),
+                      child: const Icon(Icons.bolt_rounded, size: 18, color: DSColors.mint),
                     ),
                   ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: DS.s2),
+              child: Container(
+                height: 48,
+                decoration: BoxDecoration(color: DSColors.surface, borderRadius: BorderRadius.circular(14), boxShadow: DSElevation.float),
+                child: TextField(
+                  style: const TextStyle(fontSize: 14, color: DSColors.textStrong),
+                  decoration: InputDecoration(
+                    hintText: 'Nombre o N° de expediente (EXP-000123)…',
+                    hintStyle: const TextStyle(color: DSColors.textFaint, fontSize: 13.5),
+                    prefixIcon: const Icon(Icons.search_rounded, color: DSColors.brand, size: 21),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 13),
+                  ),
+                  onChanged: (v) => setState(() => _busqueda = v),
                 ),
+              ),
+            ),
+            const SizedBox(height: DS.s1),
+            Expanded(
+              child: _loading
+                  ? ListView(children: const [SkeletonCard(), SkeletonCard(), SkeletonCard()])
+                  : _filtrados.isEmpty
+                      ? _buildEmpty()
+                      : RefreshIndicator(
+                          color: DSColors.brand,
+                          onRefresh: _load,
+                          child: ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(DS.s2, 0, DS.s2, 120),
+                            itemCount: _filtrados.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: DS.s1),
+                            itemBuilder: (_, i) => _PacienteCard(
+                              paciente: _filtrados[i],
+                              onTap: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => DoctorPatientDetailScreen(paciente: _filtrados[i])),
+                                );
+                                _load();
+                              },
+                            ),
+                          ),
+                        ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -312,22 +316,17 @@ class _DoctorPatientsScreenState extends State<DoctorPatientsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight.withOpacity(0.08),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.groups_rounded,
-                  size: 48, color: AppColors.primaryLight),
+            SizedBox(
+              width: 100, height: 100,
+              child: Stack(alignment: Alignment.center, children: [
+                Container(width: 100, height: 100, decoration: const BoxDecoration(color: DSColors.brandSoft, shape: BoxShape.circle)),
+                const Icon(Icons.groups_rounded, size: 40, color: DSColors.brand),
+              ]),
             ),
-            const SizedBox(height: 16),
-            const Text('Aún no tienes pacientes',
-                style: TextStyle(
-                    fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+            const SizedBox(height: DS.s2),
+            const Text('Aún no tenés pacientes', style: DSText.headline),
             const SizedBox(height: 6),
-            const Text('Aparecerán aquí cuando agenden citas contigo',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+            const Text('Aparecerán aquí cuando agenden citas con vos', style: DSText.body, textAlign: TextAlign.center),
           ],
         ),
       );
@@ -342,97 +341,61 @@ class _PacienteCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final nombre = paciente['nombre'] as String? ?? '';
-    final iniciales = nombre.length >= 2
-        ? nombre.substring(0, 2).toUpperCase()
-        : nombre.toUpperCase();
+    final iniciales = nombre.length >= 2 ? nombre.substring(0, 2).toUpperCase() : nombre.toUpperCase();
     final totalCitas = paciente['total_citas'] as int? ?? 0;
     final activa = paciente['cita_activa_id'] != null;
 
-    return GestureDetector(
+    return DSCard(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [AppTheme.cardShadow],
-        ),
-        child: Row(
-          children: [
-            GradientAvatar(initials: iniciales, radius: 22),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(nombre,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                          color: AppColors.textPrimary)),
-                  const SizedBox(height: 3),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 1.5),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryLight.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          serieExpediente(paciente['paciente_id'] as int),
-                          style: const TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.3,
-                              color: AppColors.primaryLight),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '$totalCitas consulta${totalCitas == 1 ? '' : 's'}',
-                        style: const TextStyle(
-                            fontSize: 12, color: AppColors.textSecondary),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+      child: Row(
+        children: [
+          Container(
+            width: 46, height: 46,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [DSColors.brand, Color(0xFF7C74F2)]),
+              shape: BoxShape.circle,
             ),
-            if (activa)
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppColors.accentDark.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
+            child: Center(child: Text(iniciales, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800))),
+          ),
+          const SizedBox(width: DS.s2),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(nombre, style: DSText.headline),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(color: DSColors.brandSoft, borderRadius: BorderRadius.circular(6)),
+                      child: Text(serieExpediente(paciente['paciente_id'] as int),
+                          style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, letterSpacing: 0.3, color: DSColors.brand)),
+                    ),
+                    const SizedBox(width: 6),
+                    Text('$totalCitas consulta${totalCitas == 1 ? '' : 's'}', style: DSText.label),
+                  ],
                 ),
-                child: const Text('Cita activa',
-                    style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.accentDark)),
-              ),
-            const SizedBox(width: 6),
-            const Icon(Icons.arrow_forward_ios_rounded,
-                size: 14, color: AppColors.textHint),
-          ],
-        ),
+              ],
+            ),
+          ),
+          if (activa) const DSChip(label: 'Cita activa', color: DSColors.mint),
+          const SizedBox(width: 6),
+          const Icon(Icons.arrow_forward_ios_rounded, size: 13, color: DSColors.textFaint),
+        ],
       ),
     );
   }
 }
 
-// ── Detalle del paciente ──────────────────────────────────────────────────────
+// ── Detalle del paciente ────────────────────────────────────────────
 
 class DoctorPatientDetailScreen extends StatefulWidget {
   final Map<String, dynamic> paciente;
   const DoctorPatientDetailScreen({super.key, required this.paciente});
 
   @override
-  State<DoctorPatientDetailScreen> createState() =>
-      _DoctorPatientDetailScreenState();
+  State<DoctorPatientDetailScreen> createState() => _DoctorPatientDetailScreenState();
 }
 
 class _DoctorPatientDetailScreenState extends State<DoctorPatientDetailScreen> {
@@ -447,8 +410,7 @@ class _DoctorPatientDetailScreenState extends State<DoctorPatientDetailScreen> {
 
   Future<void> _loadExpediente() async {
     try {
-      final data = await ApiService.getPatientMedicalRecord(
-          widget.paciente['paciente_id'] as int);
+      final data = await ApiService.getPatientMedicalRecord(widget.paciente['paciente_id'] as int);
       if (mounted) setState(() => _expediente = data);
     } catch (_) {
     } finally {
@@ -459,8 +421,7 @@ class _DoctorPatientDetailScreenState extends State<DoctorPatientDetailScreen> {
   Future<void> _abrirChat() async {
     final citaId = widget.paciente['cita_activa_id'] as int?;
     if (citaId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('El chat está disponible cuando hay una cita programada')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('El chat está disponible cuando hay una cita programada')));
       return;
     }
     final info = await ApiService.getUserInfo();
@@ -479,29 +440,22 @@ class _DoctorPatientDetailScreenState extends State<DoctorPatientDetailScreen> {
   }
 
   Future<void> _subirReceta() async {
-    final citaId = (widget.paciente['cita_activa_id'] ??
-        widget.paciente['ultima_cita_id']) as int?;
+    final citaId = (widget.paciente['cita_activa_id'] ?? widget.paciente['ultima_cita_id']) as int?;
     if (citaId == null) return;
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
-      withData: true,
-    );
+    final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'], withData: true);
     if (result == null || result.files.single.bytes == null) return;
     try {
-      await ApiService.subirRecetaArchivo(
-          citaId, result.files.single.bytes!, result.files.single.name);
+      await ApiService.subirRecetaArchivo(citaId, result.files.single.bytes!, result.files.single.name);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: const Text('Receta subida correctamente'),
-        backgroundColor: AppColors.accentDark,
+        backgroundColor: DSColors.mint,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: AppColors.error));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: DSColors.coral));
     }
   }
 
@@ -509,90 +463,53 @@ class _DoctorPatientDetailScreenState extends State<DoctorPatientDetailScreen> {
   Widget build(BuildContext context) {
     final nombre = widget.paciente['nombre'] as String? ?? '';
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: Text(nombre,
-            style: const TextStyle(
-                fontWeight: FontWeight.w700, color: Colors.white)),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      backgroundColor: DSColors.canvas,
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(DS.s2, DS.s2, DS.s2, DS.s3),
           children: [
-            // ── Acciones rápidas ────────────────────────────────────────────
+            Row(children: [
+              DSPressable(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  padding: const EdgeInsets.all(9),
+                  decoration: BoxDecoration(color: DSColors.surface, shape: BoxShape.circle, boxShadow: DSElevation.rest),
+                  child: const Icon(Icons.arrow_back_rounded, size: 18, color: DSColors.textMid),
+                ),
+              ),
+              const SizedBox(width: DS.s2),
+              Expanded(child: Text(nombre, style: DSText.title, overflow: TextOverflow.ellipsis)),
+            ]),
+            const SizedBox(height: DS.s2),
             Row(
               children: [
-                Expanded(
-                  child: _AccionBtn(
-                    icon: Icons.chat_bubble_rounded,
-                    label: 'Chat',
-                    color: AppColors.primaryLight,
-                    onTap: _abrirChat,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _AccionBtn(
-                    icon: Icons.upload_file_rounded,
-                    label: 'Subir receta',
-                    color: AppColors.accentDark,
-                    onTap: _subirReceta,
-                  ),
-                ),
+                Expanded(child: DSButton(label: 'Chat', icon: Icons.chat_bubble_rounded, color: DSColors.brand, onTap: _abrirChat)),
+                const SizedBox(width: DS.s1),
+                Expanded(child: DSButton(label: 'Receta', icon: Icons.upload_file_rounded, color: DSColors.mint, onTap: _subirReceta)),
               ],
             ),
-            const SizedBox(height: 16),
-            // ── Datos de contacto ───────────────────────────────────────────
-            _Seccion(
-              titulo: 'CONTACTO',
+            const SizedBox(height: DS.s3),
+            const DSSectionHeader(title: 'Contacto'),
+            DSCard(
               child: Column(
                 children: [
-                  _DatoRow(
-                      icon: Icons.badge_rounded,
-                      valor:
-                          'Expediente N° ${serieExpediente(widget.paciente['paciente_id'] as int)}'),
-                  _DatoRow(
-                      icon: Icons.email_rounded,
-                      valor: widget.paciente['email'] as String? ?? ''),
-                  if ((widget.paciente['telefono'] as String? ?? '')
-                      .isNotEmpty)
-                    _DatoRow(
-                        icon: Icons.phone_rounded,
-                        valor: widget.paciente['telefono'] as String),
-                  _DatoRow(
-                      icon: Icons.calendar_month_rounded,
-                      valor:
-                          '${widget.paciente['total_citas']} consultas contigo'),
+                  _DatoRow(icon: Icons.badge_rounded, valor: 'Expediente N° ${serieExpediente(widget.paciente['paciente_id'] as int)}'),
+                  _DatoRow(icon: Icons.email_rounded, valor: widget.paciente['email'] as String? ?? ''),
+                  if ((widget.paciente['telefono'] as String? ?? '').isNotEmpty)
+                    _DatoRow(icon: Icons.phone_rounded, valor: widget.paciente['telefono'] as String),
+                  _DatoRow(icon: Icons.calendar_month_rounded, valor: '${widget.paciente['total_citas']} consultas contigo', isLast: true),
                 ],
               ),
             ),
-            const SizedBox(height: 14),
-            // ── Expediente clínico ──────────────────────────────────────────
-            _Seccion(
-              titulo: 'EXPEDIENTE CLÍNICO',
+            const SizedBox(height: DS.s2),
+            const DSSectionHeader(title: 'Expediente clínico'),
+            DSCard(
               child: _loadingExp
-                  ? const Padding(
-                      padding: EdgeInsets.all(20),
-                      child: Center(
-                          child: CircularProgressIndicator(
-                              color: AppColors.primaryLight)),
-                    )
+                  ? const Padding(padding: EdgeInsets.all(20), child: Center(child: CircularProgressIndicator(color: DSColors.brand)))
                   : _expediente == null
-                      ? const Padding(
-                          padding: EdgeInsets.all(12),
-                          child: Text(
-                            'El expediente estará disponible cuando exista una cita con este paciente.',
-                            style: TextStyle(
-                                color: AppColors.textSecondary, fontSize: 13),
-                          ),
-                        )
+                      ? const Text('El expediente estará disponible cuando exista una cita con este paciente.', style: DSText.body)
                       : _ExpedienteViewer(expediente: _expediente!),
             ),
-            const SizedBox(height: 24),
           ],
         ),
       ),
@@ -600,97 +517,26 @@ class _DoctorPatientDetailScreenState extends State<DoctorPatientDetailScreen> {
   }
 }
 
-class _AccionBtn extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _AccionBtn({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: Colors.white, size: 18),
-              const SizedBox(width: 8),
-              Text(label,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13)),
-            ],
-          ),
-        ),
-      );
-}
-
-class _Seccion extends StatelessWidget {
-  final String titulo;
-  final Widget child;
-  const _Seccion({required this.titulo, required this.child});
-
-  @override
-  Widget build(BuildContext context) => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [AppTheme.cardShadow],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(titulo,
-                style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textSecondary,
-                    letterSpacing: 0.6)),
-            const SizedBox(height: 10),
-            child,
-          ],
-        ),
-      );
-}
-
 class _DatoRow extends StatelessWidget {
   final IconData icon;
   final String valor;
-  const _DatoRow({required this.icon, required this.valor});
+  final bool isLast;
+  const _DatoRow({required this.icon, required this.valor, this.isLast = false});
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
+        padding: EdgeInsets.only(bottom: isLast ? 0 : DS.s1),
         child: Row(
           children: [
-            Icon(icon, size: 15, color: AppColors.textHint),
+            Icon(icon, size: 15, color: DSColors.textFaint),
             const SizedBox(width: 10),
-            Expanded(
-              child: Text(valor,
-                  style: const TextStyle(
-                      fontSize: 13, color: AppColors.textPrimary)),
-            ),
+            Expanded(child: Text(valor, style: const TextStyle(fontSize: 13.5, color: DSColors.textStrong, fontWeight: FontWeight.w600))),
           ],
         ),
       );
 }
 
-// ── Visor de expediente (solo lectura) ────────────────────────────────────────
+// ── Visor de expediente (solo lectura) ─────────────────────────────────────────
 
 class _ExpedienteViewer extends StatelessWidget {
   final Map<String, dynamic> expediente;
@@ -708,8 +554,7 @@ class _ExpedienteViewer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pct = expediente['completitud_pct'] as int? ?? 0;
-    final secciones =
-        expediente['secciones'] as Map<String, dynamic>? ?? {};
+    final secciones = expediente['secciones'] as Map<String, dynamic>? ?? {};
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -719,24 +564,14 @@ class _ExpedienteViewer extends StatelessWidget {
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: pct / 100,
-                  minHeight: 6,
-                  backgroundColor: AppColors.cardBorder,
-                  valueColor: const AlwaysStoppedAnimation<Color>(
-                      AppColors.accentDark),
-                ),
+                child: LinearProgressIndicator(value: pct / 100, minHeight: 6, backgroundColor: DSColors.line, valueColor: const AlwaysStoppedAnimation(DSColors.mint)),
               ),
             ),
             const SizedBox(width: 8),
-            Text('$pct%',
-                style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textSecondary)),
+            Text('$pct%', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: DSColors.textMid)),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: DS.s2),
         ..._titulos.entries.map((e) {
           final sec = secciones[e.key] as Map<String, dynamic>?;
           if (sec == null) return const SizedBox.shrink();
@@ -758,9 +593,7 @@ class _SeccionExpediente extends StatelessWidget {
     if (v == null) return '—';
     if (v is List) {
       if (v.isEmpty) return '—';
-      return v
-          .map((e) => e is Map ? e.values.join(' · ') : e.toString())
-          .join('\n');
+      return v.map((e) => e is Map ? e.values.join(' · ') : e.toString()).join('\n');
     }
     return v.toString();
   }
@@ -784,50 +617,27 @@ class _SeccionExpediente extends StatelessWidget {
     final vacio = mapa.isEmpty && lista.isEmpty;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: DS.s2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(titulo,
-              style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primaryLight)),
-          const SizedBox(height: 4),
+          Text(titulo, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: DSColors.brand)),
+          const SizedBox(height: 5),
           if (vacio)
-            const Text('Sin datos registrados',
-                style: TextStyle(fontSize: 12, color: AppColors.textHint))
+            const Text('Sin datos registrados', style: TextStyle(fontSize: 12, color: DSColors.textFaint))
           else if (mapa.isNotEmpty)
-            ...mapa.entries
-                .where((e) => e.value != null && e.value.toString().isNotEmpty)
-                .map((e) => Padding(
-                      padding: const EdgeInsets.only(bottom: 2),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(
-                            width: 130,
-                            child: Text(
-                              e.key.replaceAll('_', ' '),
-                              style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textSecondary),
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(_fmt(e.value),
-                                style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.textPrimary,
-                                    fontWeight: FontWeight.w600)),
-                          ),
-                        ],
-                      ),
-                    ))
+            ...mapa.entries.where((e) => e.value != null && e.value.toString().isNotEmpty).map((e) => Padding(
+                  padding: const EdgeInsets.only(bottom: 3),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(width: 130, child: Text(e.key.replaceAll('_', ' '), style: const TextStyle(fontSize: 12, color: DSColors.textMid))),
+                      Expanded(child: Text(_fmt(e.value), style: const TextStyle(fontSize: 12, color: DSColors.textStrong, fontWeight: FontWeight.w700))),
+                    ],
+                  ),
+                ))
           else
-            Text(_fmt(lista),
-                style: const TextStyle(
-                    fontSize: 12, color: AppColors.textPrimary)),
+            Text(_fmt(lista), style: const TextStyle(fontSize: 12, color: DSColors.textStrong)),
         ],
       ),
     );
