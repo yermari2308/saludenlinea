@@ -6,7 +6,7 @@ import 'package:http/io_client.dart';
 /// Cliente HTTP que resuelve DNS via Google DoH (HTTPS) para evitar
 /// bloqueos de ISP/operadores que interceptan DNS estándar.
 class DohClient {
-  static const String _hostname = 'saludenlinea-production.up.railway.app';
+  static const String _hostname = 'saludenlinea.onrender.com';
   static String? _cachedIp;
 
   // Resuelve el hostname usando DNS-over-HTTPS de Google (puerto 443, imposible de bloquear sin romper Google)
