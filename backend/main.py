@@ -88,6 +88,7 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 ALLOWED_ORIGINS = [
+    "https://saludenlinea.onrender.com",
     "https://saludenlinea-production.up.railway.app",
     "http://localhost:8000",
     "http://localhost:3000",

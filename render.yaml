@@ -1,21 +1,37 @@
 services:
   - type: web
     name: saludenlinea
-    runtime: python
+    runtime: docker
     rootDir: backend
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    dockerfilePath: ./Dockerfile
     plan: free
+    healthCheckPath: /api
     envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: saludenlinea-db
+          property: connectionString
       - key: SECRET_KEY
         generateValue: true
+      - key: ENV
+        value: production
       - key: BASE_URL
         value: https://saludenlinea.onrender.com
-      - key: ALLOWED_ORIGINS
-        value: https://saludenlinea.onrender.com
-      - key: MP_ACCESS_TOKEN
-        sync: false
+      - key: NUMERO_SINPE
+        value: "88529543"
       - key: GOOGLE_CLIENT_ID
-        sync: false
+        value: 137990449957-5c091uvl7sqnl7md8s5cr0qng8r0bvu7.apps.googleusercontent.com
       - key: GOOGLE_CLIENT_SECRET
         sync: false
+      - key: ONVO_SECRET_KEY
+        sync: false
+      - key: ADMIN_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+
+databases:
+  - name: saludenlinea-db
+    plan: free
+    databaseName: saludenlinea
+    user: saludenlinea
