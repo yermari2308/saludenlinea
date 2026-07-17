@@ -1,5 +1,7 @@
 name: Keep Alive
 
+# Hace ping al backend cada ~10 minutos para que el plan gratis de Render
+# no se duerma tras 15 min de inactividad.
 on:
   schedule:
     - cron: '*/10 * * * *'
@@ -10,4 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping servidor
-        run: curl -s https://saludenlinea.onrender.com/docs > /dev/null && echo "Servidor activo"
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" -m 30 https://saludenlinea.onrender.com/api)
+          echo "Respuesta HTTP: $code ($(date -u))"
+          [ "$code" = "200" ] && echo "Backend activo" || echo "Backend despertando ($code)"
