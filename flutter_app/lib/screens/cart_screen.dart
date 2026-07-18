@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import '../app_theme.dart';
+import '../design_system.dart';
 import '../services/api_service.dart';
 
+/// Carrito y checkout de farmacia — Design System 2.0. Lista de artículos con
+/// controles táctiles de 44px y panel de entrega fijo con total tabular.
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
 
@@ -24,6 +26,7 @@ class _CartScreenState extends State<CartScreen> {
   @override
   void initState() {
     super.initState();
+    _direccionCtrl.addListener(() => setState(() {}));
     _load();
   }
 
@@ -66,12 +69,10 @@ class _CartScreenState extends State<CartScreen> {
   Future<void> _usarMiUbicacion() async {
     setState(() => _obteniendoGps = true);
     try {
-      // Verificar que el GPS esté activado
       if (!await Geolocator.isLocationServiceEnabled()) {
         _snack('Activá la ubicación (GPS) de tu teléfono e intentá de nuevo');
         return;
       }
-      // Solicitar permiso de ubicación
       var permiso = await Geolocator.checkPermission();
       if (permiso == LocationPermission.denied) {
         permiso = await Geolocator.requestPermission();
@@ -87,12 +88,7 @@ class _CartScreenState extends State<CartScreen> {
       );
       if (!mounted) return;
       setState(() => _ubicacion = pos);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text('Ubicación adjuntada al pedido ✓'),
-        backgroundColor: AppColors.success,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ));
+      _snack('Ubicación adjuntada al pedido', exito: true);
     } catch (e) {
       if (mounted) _snack('No se pudo obtener la ubicación: $e');
     } finally {
@@ -103,7 +99,7 @@ class _CartScreenState extends State<CartScreen> {
   Future<void> _checkout() async {
     var direccion = _direccionCtrl.text.trim();
     if (direccion.length < 10) {
-      _snack('Ingresa una dirección de entrega completa');
+      _snack('Ingresá una dirección de entrega completa');
       return;
     }
     // Adjuntar coordenadas GPS para que el repartidor llegue exacto
@@ -121,30 +117,24 @@ class _CartScreenState extends State<CartScreen> {
       await showDialog(
         context: context,
         builder: (_) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Row(
-            children: [
-              Icon(Icons.check_circle_rounded, color: AppColors.accentDark),
-              SizedBox(width: 8),
-              Text('¡Pedido creado!',
-                  style: TextStyle(
-                      fontWeight: FontWeight.w800, fontSize: 18,
-                      color: AppColors.textPrimary)),
-            ],
-          ),
+          backgroundColor: DSColors.surface,
+          shape: RoundedRectangleBorder(borderRadius: DSRadius.rMd),
+          title: const Row(children: [
+            Icon(Icons.check_circle_rounded, color: DSColors.mint),
+            SizedBox(width: 9),
+            Expanded(child: Text('¡Pedido creado!', style: DSText.headline)),
+          ]),
           content: Text(
-            'Pedido #${result['order_id']} por \$${(result['total'] as num).toStringAsFixed(2)}.\n\n'
+            'Pedido #${result['order_id']} por '
+            '\$${(result['total'] as num).toStringAsFixed(2)}.\n\n'
             '${result['mensaje']}',
-            style: const TextStyle(color: AppColors.textSecondary, height: 1.5),
+            style: DSText.body,
           ),
           actions: [
-            ElevatedButton(
+            TextButton(
               onPressed: () => Navigator.pop(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accentDark,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Entendido'),
+              child: const Text('Entendido',
+                  style: TextStyle(color: DSColors.mint, fontWeight: FontWeight.w800)),
             ),
           ],
         ),
@@ -159,358 +149,345 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
-  void _snack(String msg) => ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: AppColors.error));
+  void _snack(String msg, {bool exito = false}) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(msg),
+        backgroundColor: exito ? DSColors.mint : DSColors.coral,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ));
 
   @override
   Widget build(BuildContext context) {
+    final unidades = _items.fold<int>(0, (a, i) => a + (i['cantidad'] as int? ?? 0));
+
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Mi carrito',
-            style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white)),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primaryLight))
-          : _items.isEmpty
-              ? _buildEmpty()
-              : Column(
-                  children: [
-                    Expanded(
-                      child: ListView.separated(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _items.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
-                        itemBuilder: (_, i) => _CartTile(
-                          item: _items[i],
-                          onMas: () => _cambiarCantidad(_items[i], 1),
-                          onMenos: () => _cambiarCantidad(_items[i], -1),
-                        ),
-                      ),
-                    ),
-                    _buildCheckoutPanel(),
-                  ],
-                ),
-    );
-  }
-
-  Widget _buildEmpty() => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight.withOpacity(0.08),
-                shape: BoxShape.circle,
+      backgroundColor: DSColors.ink,
+      body: Column(
+        children: [
+          DSInkHeader(
+            title: 'Mi carrito',
+            subtitle: _items.isEmpty
+                ? null
+                : '$unidades ${unidades == 1 ? "artículo" : "artículos"}',
+          ),
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: DSColors.canvas,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(DSRadius.lg)),
               ),
-              child: const Icon(Icons.shopping_cart_outlined,
-                  size: 48, color: AppColors.primaryLight),
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator(color: DSColors.brand))
+                  : _items.isEmpty
+                      ? DSEmpty(
+                          icon: Icons.shopping_cart_outlined,
+                          title: 'Tu carrito está vacío',
+                          message: 'Agregá productos desde la farmacia y te los '
+                              'llevamos hasta tu casa.',
+                          action: DSButton(
+                            label: 'Ver productos',
+                            icon: Icons.local_pharmacy_rounded,
+                            onTap: () => Navigator.pop(context),
+                          ),
+                        )
+                      : Column(
+                          children: [
+                            Expanded(
+                              child: ListView.separated(
+                                padding: const EdgeInsets.fromLTRB(DS.s3, DS.s3, DS.s3, DS.s2),
+                                itemCount: _items.length,
+                                separatorBuilder: (_, __) => const SizedBox(height: DS.s1 + 2),
+                                itemBuilder: (_, i) => _FilaArticulo(
+                                  item: _items[i],
+                                  onMas: () => _cambiarCantidad(_items[i], 1),
+                                  onMenos: () => _cambiarCantidad(_items[i], -1),
+                                ),
+                              ),
+                            ),
+                            _panelEntrega(),
+                          ],
+                        ),
             ),
-            const SizedBox(height: 16),
-            const Text('Tu carrito está vacío',
-                style: TextStyle(
-                    fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Ver productos'),
-            ),
-          ],
-        ),
-      );
-
-  Widget _buildCheckoutPanel() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.08),
-            blurRadius: 20,
-            offset: const Offset(0, -6),
           ),
         ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TextField(
-            controller: _direccionCtrl,
-            maxLines: 2,
-            decoration: InputDecoration(
-              labelText: 'Dirección de entrega',
-              hintText: 'Provincia, cantón, distrito y señas exactas',
-              hintStyle: const TextStyle(fontSize: 12, color: AppColors.textHint),
-              filled: true,
-              fillColor: AppColors.background,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
+    );
+  }
+
+  // ── Panel de entrega y pago ────────────────────────────────────────────
+  Widget _panelEntrega() {
+    final direccionOk = _direccionCtrl.text.trim().length >= 10;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(DS.s3, DS.s3, DS.s3, DS.s2),
+      decoration: BoxDecoration(
+        color: DSColors.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(DSRadius.lg)),
+        boxShadow: DSElevation.hero,
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const DSSectionHeader(title: 'Entrega'),
+            DSField(
+              controller: _direccionCtrl,
+              label: 'Dirección de entrega',
+              icon: Icons.home_outlined,
+              maxLines: 2,
+              helper: 'Provincia, cantón, distrito y señas exactas',
             ),
-          ),
-          const SizedBox(height: 8),
-          // GPS: el repartidor llega al punto exacto
-          GestureDetector(
-            onTap: _obteniendoGps ? null : _usarMiUbicacion,
-            child: Row(
-              children: [
-                _obteniendoGps
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: AppColors.primaryLight))
-                    : Icon(
+            const SizedBox(height: DS.s1 + 4),
+            // GPS opcional para que el repartidor llegue al punto exacto
+            DSPressable(
+              onTap: _obteniendoGps ? null : _usarMiUbicacion,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: DS.s2, vertical: 11),
+                decoration: BoxDecoration(
+                  color: _ubicacion != null ? DSColors.mintSoft : DSColors.canvas,
+                  borderRadius: BorderRadius.circular(100),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_obteniendoGps)
+                      const SizedBox(
+                          width: 16, height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: DSColors.brand))
+                    else
+                      Icon(
                         _ubicacion != null
                             ? Icons.check_circle_rounded
                             : Icons.my_location_rounded,
-                        size: 18,
-                        color: _ubicacion != null
-                            ? AppColors.success
-                            : AppColors.primaryLight,
+                        size: 17,
+                        color: _ubicacion != null ? DSColors.mint : DSColors.brand,
                       ),
-                const SizedBox(width: 8),
-                Text(
-                  _ubicacion != null
-                      ? 'Ubicación GPS adjuntada al pedido'
-                      : 'Usar mi ubicación actual',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: _ubicacion != null
-                        ? AppColors.success
-                        : AppColors.primaryLight,
+                    const SizedBox(width: 8),
+                    Text(
+                      _ubicacion != null
+                          ? 'Ubicación GPS adjuntada'
+                          : 'Usar mi ubicación actual',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: _ubicacion != null ? DSColors.mint : DSColors.brand,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: DS.s3),
+            const DSSectionHeader(title: 'Cómo vas a pagar'),
+            Row(
+              children: [
+                Expanded(
+                  child: _ChipMetodo(
+                    label: 'SINPE Móvil',
+                    icon: Icons.phone_android_rounded,
+                    seleccionado: _metodoPago == 'sinpe',
+                    onTap: () => setState(() => _metodoPago = 'sinpe'),
+                  ),
+                ),
+                const SizedBox(width: DS.s1 + 2),
+                Expanded(
+                  child: _ChipMetodo(
+                    label: 'Contra entrega',
+                    icon: Icons.payments_rounded,
+                    seleccionado: _metodoPago == 'contra_entrega',
+                    onTap: () => setState(() => _metodoPago = 'contra_entrega'),
                   ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _MetodoChip(
-                  label: 'SINPE Móvil',
-                  icon: Icons.phone_android_rounded,
-                  selected: _metodoPago == 'sinpe',
-                  onTap: () => setState(() => _metodoPago = 'sinpe'),
+            const SizedBox(height: DS.s3),
+            Row(
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('TOTAL', style: DSText.caption),
+                    const SizedBox(height: 2),
+                    Text('\$${_total.toStringAsFixed(2)}',
+                        style: DSText.mono.copyWith(fontSize: 28)),
+                  ],
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _MetodoChip(
-                  label: 'Contra entrega',
-                  icon: Icons.payments_rounded,
-                  selected: _metodoPago == 'contra_entrega',
-                  onTap: () => setState(() => _metodoPago = 'contra_entrega'),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Total',
-                      style: TextStyle(
-                          fontSize: 11, color: AppColors.textSecondary)),
-                  Text(
-                    '\$${_total.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _procesando ? null : _checkout,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accentDark,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
+                const SizedBox(width: DS.s3),
+                Expanded(
                   child: _procesando
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white))
-                      : const Text('Realizar pedido',
-                          style: TextStyle(
-                              fontWeight: FontWeight.w700, fontSize: 15)),
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(vertical: 17),
+                          decoration: BoxDecoration(
+                            color: DSColors.mint,
+                            borderRadius: BorderRadius.circular(100),
+                          ),
+                          child: const Center(
+                            child: SizedBox(width: 20, height: 20,
+                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5)),
+                          ),
+                        )
+                      : direccionOk
+                          ? DSButton(
+                              label: 'Hacer pedido',
+                              icon: Icons.check_rounded,
+                              color: DSColors.mint,
+                              onTap: _checkout,
+                            )
+                          : Container(
+                              padding: const EdgeInsets.symmetric(vertical: 17),
+                              decoration: BoxDecoration(
+                                color: DSColors.line,
+                                borderRadius: BorderRadius.circular(100),
+                              ),
+                              child: const Center(
+                                child: Text('Ingresá la dirección',
+                                    style: TextStyle(
+                                        color: DSColors.textFaint,
+                                        fontSize: 13.5, fontWeight: FontWeight.w700)),
+                              ),
+                            ),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _CartTile extends StatelessWidget {
+/// Artículo del carrito con control de cantidad táctil.
+class _FilaArticulo extends StatelessWidget {
   final Map<String, dynamic> item;
   final VoidCallback onMas;
   final VoidCallback onMenos;
 
-  const _CartTile({required this.item, required this.onMas, required this.onMenos});
+  const _FilaArticulo({required this.item, required this.onMas, required this.onMenos});
 
   @override
   Widget build(BuildContext context) {
     final producto = item['producto'] as Map<String, dynamic>;
     final cantidad = item['cantidad'] as int;
     final subtotal = (item['subtotal'] as num?)?.toDouble() ?? 0;
+    final requiereReceta = producto['requiere_receta'] == true;
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [AppTheme.cardShadow],
-      ),
+    return DSCard(
+      padding: const EdgeInsets.all(DS.s1 + 4),
       child: Row(
         children: [
           Container(
-            width: 44,
-            height: 44,
+            width: 48, height: 48,
             decoration: BoxDecoration(
-              color: AppColors.primaryLight.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(10),
+              color: DSColors.brandSoft,
+              borderRadius: BorderRadius.circular(13),
             ),
-            child: const Icon(Icons.medication_rounded,
-                color: AppColors.primaryLight, size: 22),
+            child: const Icon(Icons.medication_rounded, color: DSColors.brand, size: 23),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: DS.s1 + 4),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  producto['nombre'] as String? ?? '',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                      color: AppColors.textPrimary),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '\$${subtotal.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 14,
-                      color: AppColors.primaryLight),
+                Text(producto['nombre'] as String? ?? '',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w700, color: DSColors.textStrong)),
+                const SizedBox(height: 3),
+                Row(
+                  children: [
+                    Text('\$${subtotal.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w800, color: DSColors.brand,
+                            fontFeatures: [FontFeature.tabularFigures()])),
+                    if (requiereReceta) ...[
+                      const SizedBox(width: DS.s1),
+                      const DSChip(label: 'Receta', color: Color(0xFFF97316)),
+                    ],
+                  ],
                 ),
               ],
             ),
           ),
-          Row(
-            children: [
-              _QtyBtn(icon: Icons.remove_rounded, onTap: onMenos),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: Text('$cantidad',
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 15,
-                        color: AppColors.textPrimary)),
-              ),
-              _QtyBtn(icon: Icons.add_rounded, onTap: onMas),
-            ],
+          const SizedBox(width: DS.s1),
+          _BotonCantidad(icon: Icons.remove_rounded, onTap: onMenos),
+          SizedBox(
+            width: 34,
+            child: Text('$cantidad',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.w800, color: DSColors.textStrong,
+                    fontFeatures: [FontFeature.tabularFigures()])),
           ),
+          _BotonCantidad(icon: Icons.add_rounded, onTap: onMas),
         ],
       ),
     );
   }
 }
 
-class _QtyBtn extends StatelessWidget {
+/// Botón circular de cantidad (44px de área táctil).
+class _BotonCantidad extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
-  const _QtyBtn({required this.icon, required this.onTap});
+  const _BotonCantidad({required this.icon, required this.onTap});
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) => DSPressable(
         onTap: onTap,
-        behavior: HitTestBehavior.opaque,
         child: Container(
-          // Mínimo 44x44 px de objetivo táctil (WCAG)
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: AppColors.background,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppColors.cardBorder),
+          width: 36, height: 36,
+          decoration: const BoxDecoration(
+            color: DSColors.canvas,
+            shape: BoxShape.circle,
           ),
-          child: Icon(icon, size: 20, color: AppColors.textPrimary),
+          child: Icon(icon, size: 19, color: DSColors.textStrong),
         ),
       );
 }
 
-class _MetodoChip extends StatelessWidget {
+/// Selector de método de pago del pedido.
+class _ChipMetodo extends StatelessWidget {
   final String label;
   final IconData icon;
-  final bool selected;
+  final bool seleccionado;
   final VoidCallback onTap;
 
-  const _MetodoChip({
+  const _ChipMetodo({
     required this.label,
     required this.icon,
-    required this.selected,
+    required this.seleccionado,
     required this.onTap,
   });
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) => DSPressable(
         onTap: onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(vertical: 13),
           decoration: BoxDecoration(
-            color: selected
-                ? AppColors.primaryLight.withOpacity(0.08)
-                : AppColors.background,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: selected ? AppColors.primaryLight : AppColors.cardBorder,
-              width: selected ? 1.5 : 1,
-            ),
+            color: seleccionado ? DSColors.ink : DSColors.canvas,
+            borderRadius: BorderRadius.circular(100),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon,
-                  size: 16,
-                  color: selected
-                      ? AppColors.primaryLight
-                      : AppColors.textSecondary),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  color: selected
-                      ? AppColors.primaryLight
-                      : AppColors.textSecondary,
-                ),
+              Icon(icon, size: 17, color: seleccionado ? Colors.white : DSColors.textMid),
+              const SizedBox(width: 7),
+              Flexible(
+                child: Text(label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: seleccionado ? Colors.white : DSColors.textMid)),
               ),
             ],
           ),

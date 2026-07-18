@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
 import '../services/api_service.dart';
-import 'doctor_detail_screen.dart';
 import 'doctors_screen.dart';
 
 class HraScreen extends StatefulWidget {
