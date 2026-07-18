@@ -17,7 +17,9 @@ class SaludEnLineaApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'SaludEnLínea',
+      // Nombre corto: aparece en el selector de apps recientes de Android.
+      // Dentro de la app se sigue mostrando la marca completa.
+      title: 'S.E.L+',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.theme,
       home: const SplashRouter(),
