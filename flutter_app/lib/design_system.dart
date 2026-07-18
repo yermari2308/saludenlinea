@@ -501,6 +501,233 @@ class DSDock extends StatelessWidget {
       );
 }
 
+/// Campo de texto del sistema: superficie blanca, radio 14, foco índigo.
+class DSField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final IconData? icon;
+  final bool obscure;
+  final Widget? suffix;
+  final TextInputType? keyboardType;
+  final String? Function(String?)? validator;
+  final int maxLines;
+  final int? maxLength;
+  final TextCapitalization textCapitalization;
+  final String? helper;
+
+  const DSField({
+    super.key,
+    required this.controller,
+    required this.label,
+    this.icon,
+    this.obscure = false,
+    this.suffix,
+    this.keyboardType,
+    this.validator,
+    this.maxLines = 1,
+    this.maxLength,
+    this.textCapitalization = TextCapitalization.none,
+    this.helper,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    OutlineInputBorder border(Color c) => OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: c, width: 1.4),
+        );
+    return TextFormField(
+      controller: controller,
+      obscureText: obscure,
+      keyboardType: keyboardType,
+      validator: validator,
+      maxLines: obscure ? 1 : maxLines,
+      maxLength: maxLength,
+      textCapitalization: textCapitalization,
+      style: const TextStyle(
+          fontSize: 15, color: DSColors.textStrong, fontWeight: FontWeight.w600),
+      decoration: InputDecoration(
+        labelText: label,
+        helperText: helper,
+        helperStyle: const TextStyle(fontSize: 11.5, color: DSColors.textFaint),
+        labelStyle: const TextStyle(
+            color: DSColors.textMid, fontSize: 14, fontWeight: FontWeight.w500),
+        floatingLabelStyle:
+            const TextStyle(color: DSColors.brand, fontWeight: FontWeight.w700),
+        prefixIcon: icon == null ? null : Icon(icon, color: DSColors.textMid, size: 21),
+        suffixIcon: suffix,
+        filled: true,
+        fillColor: DSColors.surface,
+        contentPadding: const EdgeInsets.symmetric(vertical: 17, horizontal: 16),
+        enabledBorder: border(DSColors.line),
+        focusedBorder: border(DSColors.brand),
+        errorBorder: border(DSColors.coral),
+        focusedErrorBorder: border(DSColors.coral),
+      ),
+    );
+  }
+}
+
+/// Encabezado de tinta para pantallas secundarias: botón atrás circular,
+/// título y subtítulo sobre gradiente grafito.
+class DSInkHeader extends StatelessWidget {
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
+  final VoidCallback? onBack;
+
+  const DSInkHeader({
+    super.key,
+    required this.title,
+    this.subtitle,
+    this.trailing,
+    this.onBack,
+  });
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [DSColors.ink, DSColors.inkSoft],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(DS.s2, DS.s2, DS.s3, DS.s3),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    DSPressable(
+                      onTap: onBack ?? () => Navigator.maybePop(context),
+                      child: Container(
+                        padding: const EdgeInsets.all(9),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.arrow_back_rounded,
+                            color: Colors.white, size: 20),
+                      ),
+                    ),
+                    const Spacer(),
+                    if (trailing != null) trailing!,
+                  ],
+                ),
+                const SizedBox(height: DS.s2),
+                Text(title,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.6)),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 4),
+                  Text(subtitle!,
+                      style: TextStyle(
+                          color: Colors.white.withOpacity(0.55),
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w500)),
+                ],
+              ],
+            ),
+          ),
+        ),
+      );
+}
+
+/// Cáscara de pantalla secundaria: encabezado de tinta + panel de lienzo.
+class DSScreen extends StatelessWidget {
+  final String title;
+  final String? subtitle;
+  final Widget child;
+  final Widget? trailing;
+  final Widget? bottom;
+  final EdgeInsets padding;
+
+  const DSScreen({
+    super.key,
+    required this.title,
+    required this.child,
+    this.subtitle,
+    this.trailing,
+    this.bottom,
+    this.padding = const EdgeInsets.fromLTRB(DS.s3, DS.s4, DS.s3, DS.s3),
+  });
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        backgroundColor: DSColors.ink,
+        body: Column(
+          children: [
+            DSInkHeader(title: title, subtitle: subtitle, trailing: trailing),
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: DSColors.canvas,
+                  borderRadius:
+                      BorderRadius.vertical(top: Radius.circular(DSRadius.lg)),
+                ),
+                child: SingleChildScrollView(padding: padding, child: child),
+              ),
+            ),
+          ],
+        ),
+        bottomNavigationBar: bottom,
+      );
+}
+
+/// Estado vacío ilustrado del sistema.
+class DSEmpty extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String message;
+  final Widget? action;
+  final Color color;
+
+  const DSEmpty({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.action,
+    this.color = DSColors.brand,
+  });
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: DS.s6, horizontal: DS.s3),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 92,
+              height: 92,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 42, color: color),
+            ),
+            const SizedBox(height: DS.s3),
+            Text(title, style: DSText.headline, textAlign: TextAlign.center),
+            const SizedBox(height: DS.s1),
+            Text(message, style: DSText.body, textAlign: TextAlign.center),
+            if (action != null) ...[
+              const SizedBox(height: DS.s3),
+              action!,
+            ],
+          ],
+        ),
+      );
+}
+
 /// Encabezado de sección del sistema.
 class DSSectionHeader extends StatelessWidget {
   final String title;

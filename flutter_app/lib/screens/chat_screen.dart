@@ -2,9 +2,11 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-import '../app_theme.dart';
+import '../design_system.dart';
 import '../services/api_service.dart';
 
+/// Chat de consulta — Design System 2.0. Encabezado de tinta con presencia
+/// en vivo, burbujas índigo/superficie y compositor flotante.
 class ChatScreen extends StatefulWidget {
   final int citaId;
   final String remitente;
@@ -36,12 +38,13 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    _controller.addListener(() => setState(() {}));
     _conectar();
   }
 
   Future<void> _conectar() async {
     if (!mounted) return;
-    setState(() { _conectando = true; });
+    setState(() => _conectando = true);
 
     _channel?.sink.close();
 
@@ -95,8 +98,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _reconnectTimer?.cancel();
     if (_intentos >= 5) return;
     _intentos++;
-    final delay = Duration(seconds: _intentos * 2);
-    _reconnectTimer = Timer(delay, _conectar);
+    _reconnectTimer = Timer(Duration(seconds: _intentos * 2), _conectar);
   }
 
   void _scrollAbajo() {
@@ -104,7 +106,7 @@ class _ChatScreenState extends State<ChatScreen> {
       _scroll.animateTo(
         _scroll.position.maxScrollExtent,
         duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOut,
+        curve: Curves.easeOutCubic,
       );
     }
   }
@@ -125,205 +127,146 @@ class _ChatScreenState extends State<ChatScreen> {
     super.dispose();
   }
 
-  bool _esMio(Map<String, dynamic> msg) =>
-      msg['remitente'] == widget.remitente;
+  bool _esMio(Map<String, dynamic> msg) => msg['remitente'] == widget.remitente;
+
+  (Color, String) get _presencia => _conectado
+      ? (DSColors.mint, 'En línea')
+      : _conectando
+          ? (const Color(0xFFF59E0B), 'Conectando…')
+          : (DSColors.coral, 'Sin conexión');
 
   @override
   Widget build(BuildContext context) {
+    final (colorPresencia, textoPresencia) = _presencia;
+    final iniciales = widget.nombreOtro.isNotEmpty
+        ? widget.nombreOtro.substring(0, 1).toUpperCase()
+        : '?';
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F5FF),
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        titleSpacing: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Row(
-          children: [
-            GradientAvatar(
-              initials: widget.nombreOtro.substring(0, 1),
-              radius: 18,
+      backgroundColor: DSColors.ink,
+      body: Column(
+        children: [
+          // ── Encabezado de tinta con presencia ───────────────────────────
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [DSColors.ink, DSColors.inkSoft],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
             ),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(widget.nombreOtro,
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
-                Row(
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(DS.s2, DS.s1, DS.s2, DS.s2),
+                child: Row(
                   children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: _conectado
-                            ? AppColors.accent
-                            : _conectando
-                                ? Colors.orange
-                                : Colors.red.shade300,
-                        shape: BoxShape.circle,
+                    DSPressable(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        padding: const EdgeInsets.all(9),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
                       ),
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      _conectado
-                          ? 'En línea'
-                          : _conectando
-                              ? 'Conectando...'
-                              : 'Desconectado',
-                      style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.white.withOpacity(0.7)),
+                    const SizedBox(width: DS.s1 + 4),
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(colors: [DSColors.mint, Color(0xFF059669)]),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(iniciales,
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800)),
+                      ),
+                    ),
+                    const SizedBox(width: DS.s1 + 4),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(widget.nombreOtro,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 15.5,
+                                  fontWeight: FontWeight.w800, letterSpacing: -0.3)),
+                          const SizedBox(height: 3),
+                          Row(
+                            children: [
+                              Container(
+                                width: 7, height: 7,
+                                decoration: BoxDecoration(color: colorPresencia, shape: BoxShape.circle),
+                              ),
+                              const SizedBox(width: 5),
+                              Text(textoPresencia,
+                                  style: TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white.withOpacity(0.6))),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.10),
+                        borderRadius: BorderRadius.circular(100),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.lock_rounded, size: 11, color: Colors.white70),
+                          const SizedBox(width: 4),
+                          Text('Privado',
+                              style: TextStyle(
+                                  fontSize: 10.5, fontWeight: FontWeight.w700,
+                                  color: Colors.white.withOpacity(0.75))),
+                        ],
+                      ),
                     ),
                   ],
                 ),
-              ],
-            ),
-          ],
-        ),
-      ),
-      body: Column(
-        children: [
-          // Banner de reconexión
-          if (!_conectado && !_conectando) ...[
-            Material(
-              color: AppColors.error.withOpacity(0.1),
-              child: InkWell(
-                onTap: () { _intentos = 0; _conectar(); },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.wifi_off_rounded, color: AppColors.error, size: 18),
-                      const SizedBox(width: 10),
-                      const Expanded(
-                        child: Text('Sin conexión — toca para reintentar',
-                            style: TextStyle(color: AppColors.error, fontSize: 13)),
-                      ),
-                      const Icon(Icons.refresh_rounded, color: AppColors.error, size: 18),
-                    ],
-                  ),
-                ),
               ),
             ),
-          ],
-          // Lista de mensajes
-          Expanded(
-            child: _mensajes.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryLight.withOpacity(0.08),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.chat_bubble_outline_rounded,
-                              size: 40, color: AppColors.primaryLight),
-                        ),
-                        const SizedBox(height: 14),
-                        const Text('Inicia la conversación',
-                            style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.textPrimary)),
-                        const SizedBox(height: 4),
-                        const Text('Los mensajes son privados y seguros',
-                            style: TextStyle(
-                                color: AppColors.textSecondary, fontSize: 12)),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    controller: _scroll,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-                    itemCount: _mensajes.length,
-                    itemBuilder: (_, i) => _BurbujaMensaje(
-                      msg: _mensajes[i],
-                      esMio: _esMio(_mensajes[i]),
-                    ),
-                  ),
           ),
-          // Barra de envío
-          Container(
-            padding: EdgeInsets.fromLTRB(
-                12, 10, 12, MediaQuery.of(context).viewInsets.bottom + 10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: const Border(top: BorderSide(color: AppColors.cardBorder)),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
-            child: SafeArea(
-              top: false,
-              child: Row(
+          // ── Cuerpo ──────────────────────────────────────────────────────
+          Expanded(
+            child: Container(
+              decoration: const BoxDecoration(
+                color: DSColors.canvas,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(DSRadius.lg)),
+              ),
+              child: Column(
                 children: [
+                  if (!_conectado && !_conectando) _bannerReconexion(),
                   Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.background,
-                        borderRadius: BorderRadius.circular(24),
-                        border: const Border.fromBorderSide(
-                            BorderSide(color: AppColors.cardBorder)),
-                      ),
-                      child: TextField(
-                        controller: _controller,
-                        maxLines: null,
-                        decoration: const InputDecoration(
-                          hintText: 'Escribe un mensaje...',
-                          hintStyle: TextStyle(color: AppColors.textHint, fontSize: 14),
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          contentPadding:
-                              EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        ),
-                        textInputAction: TextInputAction.send,
-                        onSubmitted: (_) => _enviar(),
-                      ),
-                    ),
+                    child: _mensajes.isEmpty
+                        ? const DSEmpty(
+                            icon: Icons.chat_bubble_outline_rounded,
+                            title: 'Iniciá la conversación',
+                            message: 'Tus mensajes son privados y quedan '
+                                'guardados en el expediente de esta consulta.',
+                          )
+                        : ListView.builder(
+                            controller: _scroll,
+                            padding: const EdgeInsets.fromLTRB(DS.s2, DS.s3, DS.s2, DS.s2),
+                            itemCount: _mensajes.length,
+                            itemBuilder: (_, i) => _Burbuja(
+                              msg: _mensajes[i],
+                              esMio: _esMio(_mensajes[i]),
+                            ),
+                          ),
                   ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: _conectado ? _enviar : null,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        gradient: _conectado
-                            ? const LinearGradient(
-                                colors: [AppColors.primaryLight, AppColors.primary],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              )
-                            : null,
-                        color: _conectado ? null : AppColors.textHint,
-                        shape: BoxShape.circle,
-                        boxShadow: _conectado
-                            ? [
-                                BoxShadow(
-                                  color: AppColors.primaryLight.withOpacity(0.3),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                )
-                              ]
-                            : null,
-                      ),
-                      child: const Icon(Icons.send_rounded,
-                          color: Colors.white, size: 20),
-                    ),
-                  ),
+                  _compositor(),
                 ],
               ),
             ),
@@ -332,78 +275,150 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
     );
   }
-}
 
-class _BurbujaMensaje extends StatelessWidget {
-  final Map<String, dynamic> msg;
-  final bool esMio;
-
-  const _BurbujaMensaje({required this.msg, required this.esMio});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Align(
-        alignment: esMio ? Alignment.centerRight : Alignment.centerLeft,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.72),
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: esMio
-                  ? const LinearGradient(
-                      colors: [AppColors.primaryLight, AppColors.primary],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    )
-                  : null,
-              color: esMio ? null : Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(18),
-                topRight: const Radius.circular(18),
-                bottomLeft: Radius.circular(esMio ? 18 : 4),
-                bottomRight: Radius.circular(esMio ? 4 : 18),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: (esMio ? AppColors.primaryLight : Colors.black)
-                      .withOpacity(0.1),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            child: Column(
-              crossAxisAlignment:
-                  esMio ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-              children: [
-                Text(
-                  msg['mensaje'] as String,
-                  style: TextStyle(
-                    color: esMio ? Colors.white : AppColors.textPrimary,
-                    fontSize: 14,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _hora(msg['enviado_en'] as String),
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: esMio
-                        ? Colors.white.withOpacity(0.6)
-                        : AppColors.textHint,
-                  ),
-                ),
-              ],
-            ),
+  Widget _bannerReconexion() => DSPressable(
+        onTap: () { _intentos = 0; _conectar(); },
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(DS.s2, DS.s2, DS.s2, 0),
+          padding: const EdgeInsets.symmetric(horizontal: DS.s2, vertical: 12),
+          decoration: BoxDecoration(
+            color: DSColors.coral.withOpacity(0.10),
+            borderRadius: DSRadius.rSm,
           ),
+          child: Row(
+            children: const [
+              Icon(Icons.wifi_off_rounded, color: DSColors.coral, size: 18),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text('Sin conexión — tocá para reintentar',
+                    style: TextStyle(
+                        color: DSColors.coral, fontSize: 13, fontWeight: FontWeight.w700)),
+              ),
+              Icon(Icons.refresh_rounded, color: DSColors.coral, size: 18),
+            ],
+          ),
+        ),
+      );
+
+  Widget _compositor() {
+    final puedeEnviar = _conectado && _controller.text.trim().isNotEmpty;
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+          DS.s2, DS.s1 + 2, DS.s2, MediaQuery.of(context).viewInsets.bottom + DS.s1 + 2),
+      decoration: const BoxDecoration(
+        color: DSColors.surface,
+        border: Border(top: BorderSide(color: DSColors.line)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(
+              child: Container(
+                constraints: const BoxConstraints(maxHeight: 120),
+                decoration: BoxDecoration(
+                  color: DSColors.canvas,
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: DSColors.line, width: 1.2),
+                ),
+                child: TextField(
+                  controller: _controller,
+                  maxLines: null,
+                  style: const TextStyle(
+                      fontSize: 14.5, color: DSColors.textStrong, fontWeight: FontWeight.w500),
+                  decoration: const InputDecoration(
+                    hintText: 'Escribí un mensaje…',
+                    hintStyle: TextStyle(color: DSColors.textFaint, fontSize: 14),
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(horizontal: DS.s2, vertical: 12),
+                  ),
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (_) => _enviar(),
+                ),
+              ),
+            ),
+            const SizedBox(width: DS.s1),
+            DSPressable(
+              onTap: puedeEnviar ? _enviar : null,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOutCubic,
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: puedeEnviar ? DSColors.brand : DSColors.line,
+                  shape: BoxShape.circle,
+                  boxShadow: puedeEnviar ? DSElevation.glow(DSColors.brand) : null,
+                ),
+                child: Icon(Icons.arrow_upward_rounded,
+                    color: puedeEnviar ? Colors.white : DSColors.textFaint, size: 22),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
+}
+
+/// Burbuja de mensaje: índigo para propios, superficie para el otro.
+class _Burbuja extends StatelessWidget {
+  final Map<String, dynamic> msg;
+  final bool esMio;
+
+  const _Burbuja({required this.msg, required this.esMio});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: DS.s1),
+        child: Align(
+          alignment: esMio ? Alignment.centerRight : Alignment.centerLeft,
+          child: ConstrainedBox(
+            constraints:
+                BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 11),
+              decoration: BoxDecoration(
+                color: esMio ? DSColors.brand : DSColors.surface,
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(20),
+                  topRight: const Radius.circular(20),
+                  bottomLeft: Radius.circular(esMio ? 20 : 6),
+                  bottomRight: Radius.circular(esMio ? 6 : 20),
+                ),
+                boxShadow: DSElevation.rest,
+              ),
+              child: Column(
+                crossAxisAlignment:
+                    esMio ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    msg['mensaje'] as String? ?? '',
+                    style: TextStyle(
+                      color: esMio ? Colors.white : DSColors.textStrong,
+                      fontSize: 14.5,
+                      height: 1.45,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    _hora(msg['enviado_en'] as String? ?? ''),
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: esMio ? Colors.white.withOpacity(0.65) : DSColors.textFaint,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
 
   String _hora(String iso) {
     try {
