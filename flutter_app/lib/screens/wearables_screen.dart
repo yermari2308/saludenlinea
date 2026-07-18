@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:health/health.dart';
-import '../app_theme.dart';
+import '../design_system.dart';
 import '../services/api_service.dart';
 
+/// Actividad física (Health Connect) — Design System 2.0. Resumen del día en
+/// anillos, historial semanal con barras proporcionales.
 class WearablesScreen extends StatefulWidget {
   const WearablesScreen({super.key});
 
@@ -15,6 +17,9 @@ class _WearablesScreenState extends State<WearablesScreen> {
   bool _sincronizando = false;
   bool _conectado = false;
   List<Map<String, dynamic>> _metricas = [];
+
+  /// Meta diaria de referencia para el anillo de pasos.
+  static const _metaPasos = 10000;
 
   static final _tipos = [
     HealthDataType.STEPS,
@@ -106,21 +111,14 @@ class _WearablesScreenState extends State<WearablesScreen> {
       }
 
       if (dias.isEmpty) {
-        _snack('No se encontraron datos de actividad en los últimos 7 días. '
-            'Verificá que tu reloj o app de salud esté conectada a Health Connect.');
+        _snack('No encontramos actividad en los últimos 7 días. Verificá que '
+            'tu reloj o app de salud esté conectada a Health Connect.');
         return;
       }
 
       await ApiService.syncHealthMetrics(dias);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${dias.length} días sincronizados correctamente'),
-          backgroundColor: AppColors.accentDark,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
+      _snack('${dias.length} días sincronizados correctamente', exito: true);
       _load();
     } catch (e) {
       if (!mounted) return;
@@ -130,292 +128,156 @@ class _WearablesScreenState extends State<WearablesScreen> {
     }
   }
 
-  void _snack(String msg) {
+  void _snack(String msg, {bool exito = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
+      backgroundColor: exito ? DSColors.mint : DSColors.coral,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ));
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Actividad física',
-            style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white)),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primaryLight))
-          : RefreshIndicator(
-              onRefresh: _load,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (!_conectado) _buildOnboarding(),
-                    if (_conectado) ...[
-                      _buildResumenHoy(),
-                      const SizedBox(height: 20),
-                      const Text('ÚLTIMOS DÍAS',
-                          style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textSecondary,
-                              letterSpacing: 0.6)),
-                      const SizedBox(height: 10),
-                      ..._metricas.map((m) => _DiaCard(metrica: m)),
-                    ],
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        icon: _sincronizando
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2, color: Colors.white))
-                            : const Icon(Icons.sync_rounded),
-                        label: Text(
-                          _conectado
-                              ? 'Sincronizar de nuevo'
-                              : 'Conectar con Health Connect',
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w700, fontSize: 15),
-                        ),
-                        onPressed: _sincronizando ? null : _sincronizar,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.accentDark,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 15),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
+  Widget build(BuildContext context) => DSScreen(
+        title: 'Actividad física',
+        subtitle: _conectado ? 'Sincronizado con Health Connect' : 'Conectá tu reloj o pulsera',
+        child: _loading
+            ? const Padding(
+                padding: EdgeInsets.symmetric(vertical: DS.s6),
+                child: Center(child: CircularProgressIndicator(color: DSColors.brand)),
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (!_conectado) _onboarding() else ...[
+                    _resumenHoy(),
+                    const SizedBox(height: DS.s4),
+                    const DSSectionHeader(title: 'Últimos días'),
+                    ..._historial(),
                   ],
+                  const SizedBox(height: DS.s4),
+                  _sincronizando
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(vertical: 17),
+                          decoration: BoxDecoration(
+                            color: DSColors.mint,
+                            borderRadius: BorderRadius.circular(100),
+                            boxShadow: DSElevation.glow(DSColors.mint),
+                          ),
+                          child: const Center(
+                            child: SizedBox(width: 22, height: 22,
+                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5)),
+                          ),
+                        )
+                      : DSButton(
+                          label: _conectado ? 'Sincronizar de nuevo' : 'Conectar con Health Connect',
+                          icon: Icons.sync_rounded,
+                          color: DSColors.mint,
+                          onTap: _sincronizar,
+                        ),
+                ],
+              ),
+      );
+
+  // ── Onboarding ─────────────────────────────────────────────────────────
+  Widget _onboarding() => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          DSInkCard(
+            child: Column(
+              children: [
+                Container(
+                  width: 66, height: 66,
+                  decoration: BoxDecoration(
+                    color: DSColors.mint.withOpacity(0.16),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Icon(Icons.watch_rounded, color: DSColors.mint, size: 32),
                 ),
-              ),
+                const SizedBox(height: DS.s2),
+                const Text('Conectá tu reloj o pulsera',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: Colors.white, fontSize: 19,
+                        fontWeight: FontWeight.w800, letterSpacing: -0.4)),
+                const SizedBox(height: DS.s1),
+                Text(
+                  'Leemos tus pasos, calorías y distancia desde Health Connect. '
+                  'Tu médico ve tu nivel de actividad y te da mejores recomendaciones.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      color: Colors.white.withOpacity(0.6), fontSize: 13, height: 1.6),
+                ),
+              ],
             ),
-    );
-  }
-
-  Widget _buildOnboarding() {
-    return Column(
-      children: [
-        const SizedBox(height: 12),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            gradient: AppTheme.primaryGradient,
-            borderRadius: BorderRadius.circular(20),
           ),
-          child: Column(
-            children: [
-              const Icon(Icons.watch_rounded, color: Colors.white, size: 48),
-              const SizedBox(height: 16),
-              const Text(
-                'Conecta tu reloj o pulsera',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 10),
-              Text(
-                'Nos integramos con Health Connect de Android para leer tus pasos, '
-                'calorías y distancia. Tus médicos podrán ver tu nivel de actividad '
-                'y darte mejores recomendaciones.',
-                style: TextStyle(
-                    color: Colors.white.withOpacity(0.85),
-                    fontSize: 13.5,
-                    height: 1.6),
-                textAlign: TextAlign.center,
-              ),
-            ],
+          const SizedBox(height: DS.s4),
+          const DSSectionHeader(title: 'Cómo conectarlo'),
+          DSCard(
+            child: Column(
+              children: const [
+                _Paso('1', 'Instalá o abrí Health Connect (viene incluido en Android 14+).'),
+                _Paso('2', 'Conectá tu reloj —Samsung Health, Fitbit, Garmin, Mi Fitness— a Health Connect.'),
+                _Paso('3', 'Tocá el botón de abajo y aceptá los permisos de lectura.', ultimo: true),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 16),
-        _PasoTile(
-            numero: '1',
-            texto: 'Instalá o abrí Health Connect en tu teléfono (viene incluido en Android 14+)'),
-        _PasoTile(
-            numero: '2',
-            texto: 'Conectá tu reloj (Samsung Health, Fitbit, Garmin, Mi Fitness…) a Health Connect'),
-        _PasoTile(
-            numero: '3',
-            texto: 'Tocá el botón de abajo y aceptá los permisos de lectura'),
-        const SizedBox(height: 8),
-      ],
-    );
-  }
+        ],
+      );
 
-  Widget _buildResumenHoy() {
+  // ── Resumen del día ────────────────────────────────────────────────────
+  Widget _resumenHoy() {
     final hoy = _metricas.isNotEmpty ? _metricas.first : null;
     if (hoy == null) return const SizedBox.shrink();
-    return Row(
-      children: [
-        Expanded(
-          child: _StatCard(
-            icon: Icons.directions_walk_rounded,
-            color: AppColors.primaryLight,
-            valor: '${hoy['pasos']}',
-            label: 'Pasos',
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _StatCard(
-            icon: Icons.local_fire_department_rounded,
-            color: const Color(0xFFF59E0B),
-            valor: '${(hoy['calorias'] as num).round()}',
-            label: 'Calorías',
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _StatCard(
-            icon: Icons.route_rounded,
-            color: AppColors.accentDark,
-            valor: '${((hoy['distancia'] as num) / 1000).toStringAsFixed(1)} km',
-            label: 'Distancia',
-          ),
-        ),
-      ],
-    );
-  }
-}
 
-class _PasoTile extends StatelessWidget {
-  final String numero;
-  final String texto;
-  const _PasoTile({required this.numero, required this.texto});
+    final pasos = (hoy['pasos'] as num?)?.toInt() ?? 0;
+    final cal = ((hoy['calorias'] as num?) ?? 0).round();
+    final dist = ((hoy['distancia'] as num?) ?? 0) / 1000;
 
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 26,
-              height: 26,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Text(numero,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 13,
-                      color: AppColors.primaryLight)),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 3),
-                child: Text(texto,
-                    style: const TextStyle(
-                        fontSize: 13,
-                        color: AppColors.textSecondary,
-                        height: 1.4)),
-              ),
-            ),
-          ],
-        ),
-      );
-}
-
-class _StatCard extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-  final String valor;
-  final String label;
-
-  const _StatCard({
-    required this.icon,
-    required this.color,
-    required this.valor,
-    required this.label,
-  });
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [AppTheme.cardShadow],
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(height: 6),
-            Text(valor,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                    color: AppColors.textPrimary)),
-            const SizedBox(height: 2),
-            Text(label,
-                style: const TextStyle(
-                    fontSize: 11, color: AppColors.textSecondary)),
-          ],
-        ),
-      );
-}
-
-class _DiaCard extends StatelessWidget {
-  final Map<String, dynamic> metrica;
-  const _DiaCard({required this.metrica});
-
-  @override
-  Widget build(BuildContext context) {
-    final fecha = metrica['fecha'] as String? ?? '';
-    final pasos = metrica['pasos'] as int? ?? 0;
-    final cal = (metrica['calorias'] as num?)?.round() ?? 0;
-    final dist = ((metrica['distancia'] as num?) ?? 0) / 1000;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [AppTheme.cardShadow],
-      ),
+    return DSInkCard(
       child: Row(
         children: [
-          SizedBox(
-            width: 78,
-            child: Text(fecha,
-                style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary)),
-          ),
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+          DSProgressRing(
+            pct: pasos / _metaPasos,
+            color: DSColors.mint,
+            size: 92,
+            center: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                _Mini(icon: Icons.directions_walk_rounded, valor: '$pasos'),
-                _Mini(icon: Icons.local_fire_department_rounded, valor: '$cal'),
-                _Mini(
-                    icon: Icons.route_rounded,
-                    valor: '${dist.toStringAsFixed(1)}km'),
+                Text('$pasos',
+                    style: const TextStyle(
+                        color: Colors.white, fontSize: 19, fontWeight: FontWeight.w800,
+                        fontFeatures: [FontFeature.tabularFigures()])),
+                Text('pasos',
+                    style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 10, fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
+          const SizedBox(width: DS.s3),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Tu día',
+                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 3),
+                Text('Meta: ${_metaPasos ~/ 1000} mil pasos',
+                    style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12)),
+                const SizedBox(height: DS.s2),
+                _LineaMetrica(
+                  icon: Icons.local_fire_department_rounded,
+                  color: const Color(0xFFF59E0B),
+                  valor: '$cal',
+                  unidad: 'kcal quemadas',
+                ),
+                const SizedBox(height: DS.s1),
+                _LineaMetrica(
+                  icon: Icons.route_rounded,
+                  color: DSColors.brand,
+                  valor: dist.toStringAsFixed(1),
+                  unidad: 'km recorridos',
+                ),
               ],
             ),
           ),
@@ -423,22 +285,173 @@ class _DiaCard extends StatelessWidget {
       ),
     );
   }
+
+  // ── Historial con barras proporcionales ────────────────────────────────
+  List<Widget> _historial() {
+    final maxPasos = _metricas
+        .map((m) => (m['pasos'] as num?)?.toInt() ?? 0)
+        .fold<int>(1, (a, b) => b > a ? b : a);
+
+    return _metricas
+        .map((m) => Padding(
+              padding: const EdgeInsets.only(bottom: DS.s1),
+              child: _DiaFila(metrica: m, maxPasos: maxPasos),
+            ))
+        .toList();
+  }
 }
 
-class _Mini extends StatelessWidget {
+/// Fila de métrica secundaria sobre tinta.
+class _LineaMetrica extends StatelessWidget {
   final IconData icon;
+  final Color color;
   final String valor;
-  const _Mini({required this.icon, required this.valor});
+  final String unidad;
+
+  const _LineaMetrica({
+    required this.icon,
+    required this.color,
+    required this.valor,
+    required this.unidad,
+  });
 
   @override
   Widget build(BuildContext context) => Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: AppColors.textHint),
-          const SizedBox(width: 4),
+          Icon(icon, color: color, size: 16),
+          const SizedBox(width: 7),
           Text(valor,
               style: const TextStyle(
-                  fontSize: 12, color: AppColors.textSecondary)),
+                  color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800,
+                  fontFeatures: [FontFeature.tabularFigures()])),
+          const SizedBox(width: 5),
+          Text(unidad,
+              style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11.5, fontWeight: FontWeight.w600)),
         ],
       );
+}
+
+/// Paso numerado del onboarding.
+class _Paso extends StatelessWidget {
+  final String numero;
+  final String texto;
+  final bool ultimo;
+  const _Paso(this.numero, this.texto, {this.ultimo = false});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: EdgeInsets.only(bottom: ultimo ? 0 : DS.s2),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 26, height: 26,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                color: DSColors.brandSoft,
+                shape: BoxShape.circle,
+              ),
+              child: Text(numero,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w800, fontSize: 12.5, color: DSColors.brand)),
+            ),
+            const SizedBox(width: DS.s1 + 4),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(texto,
+                    style: const TextStyle(
+                        fontSize: 13, color: DSColors.textMid, height: 1.5, fontWeight: FontWeight.w500)),
+              ),
+            ),
+          ],
+        ),
+      );
+}
+
+/// Fila de día con barra proporcional de pasos.
+class _DiaFila extends StatelessWidget {
+  final Map<String, dynamic> metrica;
+  final int maxPasos;
+  const _DiaFila({required this.metrica, required this.maxPasos});
+
+  static const _dias = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+
+  @override
+  Widget build(BuildContext context) {
+    final fechaStr = metrica['fecha'] as String? ?? '';
+    final fecha = DateTime.tryParse(fechaStr);
+    final pasos = (metrica['pasos'] as num?)?.toInt() ?? 0;
+    final cal = ((metrica['calorias'] as num?) ?? 0).round();
+    final dist = ((metrica['distancia'] as num?) ?? 0) / 1000;
+    final pct = maxPasos > 0 ? pasos / maxPasos : 0.0;
+    final etiqueta = fecha != null
+        ? '${_dias[fecha.weekday - 1]} ${fecha.day}'
+        : fechaStr;
+
+    return DSCard(
+      padding: const EdgeInsets.symmetric(horizontal: DS.s2, vertical: 13),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 54,
+            child: Text(etiqueta,
+                style: const TextStyle(
+                    fontSize: 12.5, fontWeight: FontWeight.w800, color: DSColors.textStrong)),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text('$pasos',
+                        style: const TextStyle(
+                            fontSize: 13.5, fontWeight: FontWeight.w800, color: DSColors.textStrong,
+                            fontFeatures: [FontFeature.tabularFigures()])),
+                    const SizedBox(width: 3),
+                    const Text('pasos',
+                        style: TextStyle(fontSize: 11, color: DSColors.textFaint, fontWeight: FontWeight.w600)),
+                    const Spacer(),
+                    Text('$cal kcal · ${dist.toStringAsFixed(1)} km',
+                        style: const TextStyle(
+                            fontSize: 11, color: DSColors.textFaint, fontWeight: FontWeight.w600,
+                            fontFeatures: [FontFeature.tabularFigures()])),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                // Barra proporcional
+                LayoutBuilder(
+                  builder: (_, c) => Stack(
+                    children: [
+                      Container(
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: DSColors.canvas,
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0, end: pct.clamp(0, 1)),
+                        duration: const Duration(milliseconds: 700),
+                        curve: Curves.easeOutCubic,
+                        builder: (_, v, __) => Container(
+                          height: 6,
+                          width: c.maxWidth * v,
+                          decoration: BoxDecoration(
+                            color: DSColors.mint,
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
