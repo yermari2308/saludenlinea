@@ -408,81 +408,86 @@ class _DoctorInicioTabState extends State<_DoctorInicioTab> {
     );
   }
 
+  /// Cabecera de tinta del panel médico con acciones de sistema.
   Widget _buildAppBar(AsyncSnapshot snap) {
     return SliverAppBar(
-      expandedHeight: 130,
+      expandedHeight: 138,
       pinned: true,
-      backgroundColor: AppColors.primary,
+      backgroundColor: DSColors.ink,
       foregroundColor: Colors.white,
+      elevation: 0,
       automaticallyImplyLeading: false,
-      actions: [
-        // Command palette: buscar expediente por N° de serie o nombre
-        IconButton(
-          icon: const Icon(Icons.search_rounded, size: 23),
-          tooltip: 'Buscar expediente (N° de serie)',
-          onPressed: () => mostrarCommandPalette(context),
-        ),
-        IconButton(
-          icon: const Icon(Icons.refresh_rounded, size: 22),
-          onPressed: () => setState(() => _cargarDatos()),
-        ),
-        IconButton(
-          icon: const Icon(Icons.logout_rounded, size: 22),
-          onPressed: _logout,
-        ),
-      ],
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
-          decoration: AppTheme.gradientBox,
-          child: Stack(
-            children: [
-              Positioned(
-                right: -30,
-                top: -30,
-                child: Container(
-                  width: 160,
-                  height: 160,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.05),
-                  ),
-                ),
-              ),
-              SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.end,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [DSColors.ink, DSColors.inkSoft],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(DS.s3, DS.s1, DS.s2, DS.s2),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(_saludoHora(),
-                          style: TextStyle(
-                              color: Colors.white.withOpacity(0.65),
-                              fontSize: 13)),
-                      const SizedBox(height: 2),
-                      Text(
-                        _nombreDoctor.isNotEmpty
-                            ? 'Dr. $_nombreDoctor'
-                            : 'Panel Médico',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.4,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(_saludoHora(),
+                                style: TextStyle(
+                                    color: Colors.white.withOpacity(0.55),
+                                    fontSize: 12.5, fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 3),
+                            Text(
+                              _nombreDoctor.isNotEmpty
+                                  ? 'Dr. $_nombreDoctor'
+                                  : 'Panel médico',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 23,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(_fechaHoy(),
+                                style: TextStyle(
+                                    color: Colors.white.withOpacity(0.45),
+                                    fontSize: 11.5, fontWeight: FontWeight.w600)),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 3),
-                      Text(
-                        _fechaHoy(),
-                        style: TextStyle(
-                            color: Colors.white.withOpacity(0.5),
-                            fontSize: 12),
+                      _AccionCabecera(
+                        icon: Icons.search_rounded,
+                        tooltip: 'Buscar expediente por N° de serie',
+                        onTap: () => mostrarCommandPalette(context),
+                      ),
+                      const SizedBox(width: 7),
+                      _AccionCabecera(
+                        icon: Icons.refresh_rounded,
+                        tooltip: 'Actualizar',
+                        onTap: () => setState(() => _cargarDatos()),
+                      ),
+                      const SizedBox(width: 7),
+                      _AccionCabecera(
+                        icon: Icons.logout_rounded,
+                        tooltip: 'Cerrar sesión',
+                        color: DSColors.coral,
+                        onTap: _logout,
                       ),
                     ],
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -1233,4 +1238,35 @@ class _ActionBtn extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Botón circular de acción en la cabecera de tinta del panel médico.
+class _AccionCabecera extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+  final Color? color;
+
+  const _AccionCabecera({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+        message: tooltip,
+        child: DSPressable(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.all(9),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 19, color: color ?? Colors.white),
+          ),
+        ),
+      );
 }
