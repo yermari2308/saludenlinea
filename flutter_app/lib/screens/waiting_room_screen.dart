@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-import '../app_theme.dart';
+import '../design_system.dart';
 import '../services/api_service.dart';
 import 'consultation_screen.dart';
 
+/// Sala de espera de urgencias — Design System 2.0. Inmersión total en tinta
+/// con ondas de urgencia expansivas y métricas tabulares en vivo.
 class WaitingRoomScreen extends StatefulWidget {
   final int queueId;
   final int posicion;
@@ -31,7 +33,6 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen>
   int _posicion = 1;
   String _estado = 'esperando';
   String? _doctorNombre;
-  String? _jitsiUrl;
   int? _appointmentId;
   bool _navigated = false;
 
@@ -42,8 +43,8 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen>
 
     _pulseCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
+      duration: const Duration(milliseconds: 2400),
+    )..repeat();
 
     _conectarWs();
     _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) => _poll());
@@ -60,10 +61,10 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen>
         (raw) {
           final data = jsonDecode(raw as String) as Map<String, dynamic>;
           if (data['event'] == 'asignada') {
+            if (!mounted) return;
             setState(() {
               _estado = 'asignada';
               _doctorNombre = data['doctor_nombre'] as String?;
-              _jitsiUrl = data['jitsi_url'] as String?;
               _appointmentId = data['appointment_id'] as int?;
             });
             _irAConsulta();
@@ -83,12 +84,9 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen>
         _estado = status['estado'] as String? ?? _estado;
         _posicion = status['posicion'] as int? ?? _posicion;
         _doctorNombre = status['doctor_nombre'] as String?;
-        _jitsiUrl = status['jitsi_url'] as String?;
         _appointmentId = status['appointment_id'] as int?;
       });
-      if (_estado == 'asignada' || _estado == 'en_curso') {
-        _irAConsulta();
-      }
+      if (_estado == 'asignada' || _estado == 'en_curso') _irAConsulta();
     } catch (_) {}
   }
 
@@ -111,25 +109,21 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen>
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('¿Salir de la cola?',
-            style: TextStyle(fontWeight: FontWeight.w700)),
-        content: const Text('Perderás tu lugar en la fila.'),
+        backgroundColor: DSColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: DSRadius.rMd),
+        title: const Text('¿Salir de la cola?', style: DSText.headline),
+        content: Text('Vas a perder tu lugar en la fila y tendrías que empezar de nuevo.',
+            style: DSText.body),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Quedarme',
-                style: TextStyle(color: AppColors.textSecondary)),
+                style: TextStyle(color: DSColors.textMid, fontWeight: FontWeight.w700)),
           ),
-          ElevatedButton(
+          TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-            ),
-            child: const Text('Salir'),
+            child: const Text('Salir',
+                style: TextStyle(color: DSColors.coral, fontWeight: FontWeight.w800)),
           ),
         ],
       ),
@@ -152,255 +146,256 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen>
 
   @override
   Widget build(BuildContext context) {
+    final asignado = _doctorNombre != null;
+
     return PopScope(
       canPop: false,
       onPopInvoked: (didPop) {
         if (!didPop) _cancelar();
       },
       child: Scaffold(
-        backgroundColor: AppColors.background,
-        body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-            child: Column(
-              children: [
-                // Header
-                Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded,
-                          color: AppColors.textSecondary),
-                      onPressed: _cancelar,
-                    ),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: AppColors.accent.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 7,
-                            height: 7,
-                            decoration: const BoxDecoration(
-                              color: AppColors.accent,
-                              shape: BoxShape.circle,
-                            ),
+        backgroundColor: DSColors.ink,
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [DSColors.ink, DSColors.inkSoft],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(DS.s3, DS.s2, DS.s3, DS.s3),
+              child: Column(
+                children: [
+                  // ── Barra superior ────────────────────────────────────
+                  Row(
+                    children: [
+                      DSPressable(
+                        onTap: _cancelar,
+                        child: Container(
+                          padding: const EdgeInsets.all(9),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.12),
+                            shape: BoxShape.circle,
                           ),
-                          const SizedBox(width: 6),
-                          const Text(
-                            'En espera',
-                            style: TextStyle(
-                              color: AppColors.accentDark,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 12,
+                          child: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
+                        ),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: DSColors.coral.withOpacity(0.18),
+                          borderRadius: BorderRadius.circular(100),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 7, height: 7,
+                              decoration: const BoxDecoration(
+                                  color: DSColors.coral, shape: BoxShape.circle),
+                            ),
+                            const SizedBox(width: 6),
+                            const Text('ATENCIÓN URGENTE',
+                                style: TextStyle(
+                                    color: DSColors.coral, fontSize: 10,
+                                    fontWeight: FontWeight.w800, letterSpacing: 0.8)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+
+                  // ── Ondas de urgencia ─────────────────────────────────
+                  SizedBox(
+                    width: 220,
+                    height: 220,
+                    child: AnimatedBuilder(
+                      animation: _pulseCtrl,
+                      builder: (_, __) => Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          _onda(0),
+                          _onda(0.33),
+                          _onda(0.66),
+                          Container(
+                            width: 104,
+                            height: 104,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [DSColors.coral, DSColors.coralDeep],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              shape: BoxShape.circle,
+                              boxShadow: DSElevation.glow(DSColors.coral),
+                            ),
+                            child: Icon(
+                              asignado ? Icons.check_rounded : Icons.medical_services_rounded,
+                              color: Colors.white, size: 44,
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ],
-                ),
-                const Spacer(),
+                  ),
+                  const SizedBox(height: DS.s5),
 
-                // Animación de pulso
-                AnimatedBuilder(
-                  animation: _pulseCtrl,
-                  builder: (_, __) {
-                    final scale = 1.0 + _pulseCtrl.value * 0.08;
-                    return Transform.scale(
-                      scale: scale,
-                      child: Container(
-                        width: 130,
-                        height: 130,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: const Color(0xFFE53E3E).withOpacity(0.1 +
-                              _pulseCtrl.value * 0.05),
-                          border: Border.all(
-                            color: const Color(0xFFE53E3E).withOpacity(0.3),
-                            width: 3,
-                          ),
-                        ),
-                        child: Center(
-                          child: Container(
-                            width: 90,
-                            height: 90,
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: LinearGradient(
-                                colors: [
-                                  Color(0xFFFF4444),
-                                  Color(0xFFCC0000),
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                            ),
-                            child: const Icon(
-                              Icons.medical_services_rounded,
-                              color: Colors.white,
-                              size: 40,
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 36),
+                  Text(
+                    asignado ? '¡Médico encontrado!' : 'Conectando con un médico',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        color: Colors.white, fontSize: 24,
+                        fontWeight: FontWeight.w800, letterSpacing: -0.6),
+                  ),
+                  const SizedBox(height: DS.s1),
+                  Text(
+                    asignado
+                        ? 'Te estamos llevando a la consulta…'
+                        : _posicion <= 1
+                            ? 'Sos el siguiente en la fila'
+                            : 'Hay $_posicion personas antes que vos',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 14.5),
+                  ),
+                  const SizedBox(height: DS.s4),
 
-                // Título
-                const Text(
-                  'Conectando con un médico',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
-                    letterSpacing: -0.3,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  _posicion <= 1
-                      ? 'Eres el siguiente en la fila'
-                      : 'Hay $_posicion personas antes que tú',
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 15,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 32),
-
-                // Card de posición
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 28, vertical: 20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [AppTheme.cardShadow],
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _StatCell(
-                        label: 'Posición',
-                        value: '#$_posicion',
-                        icon: Icons.queue_rounded,
-                        color: AppColors.primaryLight,
-                      ),
-                      Container(
-                          width: 1, height: 40, color: AppColors.cardBorder),
-                      _StatCell(
-                        label: 'Espera aprox.',
-                        value: '~${(_posicion * 8)} min',
-                        icon: Icons.access_time_rounded,
-                        color: AppColors.accent,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 28),
-
-                // Mensaje de estado
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryLight.withOpacity(0.06),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Row(
-                    children: [
-                      const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.primaryLight,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          _doctorNombre != null
-                              ? 'Te asignamos al Dr. $_doctorNombre'
-                              : 'Buscando el médico disponible más cercano...',
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Spacer(),
-
-                // Botón cancelar
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: _cancelar,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.textSecondary,
-                      side: const BorderSide(color: AppColors.cardBorder),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
+                  // ── Métricas ──────────────────────────────────────────
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: DS.s3),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.07),
+                      borderRadius: DSRadius.rMd,
+                      border: Border.all(color: Colors.white.withOpacity(0.09)),
                     ),
-                    child: const Text('Cancelar y salir'),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _Metrica(
+                            icon: Icons.tag_rounded,
+                            valor: '$_posicion',
+                            etiqueta: 'Tu posición',
+                            color: DSColors.brand,
+                          ),
+                        ),
+                        Container(width: 1, height: 44, color: Colors.white.withOpacity(0.10)),
+                        Expanded(
+                          child: _Metrica(
+                            icon: Icons.schedule_rounded,
+                            valor: '~${_posicion * 8}',
+                            etiqueta: 'Minutos aprox.',
+                            color: DSColors.mint,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: DS.s3),
+
+                  // ── Estado en vivo ────────────────────────────────────
+                  Container(
+                    padding: const EdgeInsets.all(DS.s2),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.05),
+                      borderRadius: DSRadius.rSm,
+                    ),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 17, height: 17,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: asignado ? DSColors.mint : DSColors.brand,
+                          ),
+                        ),
+                        const SizedBox(width: DS.s2),
+                        Expanded(
+                          child: Text(
+                            asignado
+                                ? 'Asignado al Dr. $_doctorNombre'
+                                : 'Buscando el médico disponible más cercano…',
+                            style: TextStyle(
+                                color: Colors.white.withOpacity(0.75),
+                                fontSize: 13, fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Spacer(),
+
+                  DSPressable(
+                    onTap: _cancelar,
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(100),
+                        border: Border.all(color: Colors.white.withOpacity(0.22), width: 1.4),
+                      ),
+                      child: Center(
+                        child: Text('Cancelar y salir',
+                            style: TextStyle(
+                                color: Colors.white.withOpacity(0.75),
+                                fontSize: 14.5, fontWeight: FontWeight.w700)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
     );
   }
+
+  /// Onda expansiva desfasada que se desvanece al crecer.
+  Widget _onda(double offset) {
+    final t = (_pulseCtrl.value + offset) % 1.0;
+    return Container(
+      width: 104 + (116 * t),
+      height: 104 + (116 * t),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: DSColors.coral.withOpacity((1 - t) * 0.45),
+          width: 2,
+        ),
+      ),
+    );
+  }
 }
 
-class _StatCell extends StatelessWidget {
-  final String label;
-  final String value;
+/// Métrica de la sala de espera con número tabular.
+class _Metrica extends StatelessWidget {
   final IconData icon;
+  final String valor;
+  final String etiqueta;
   final Color color;
 
-  const _StatCell({
-    required this.label,
-    required this.value,
+  const _Metrica({
     required this.icon,
+    required this.valor,
+    required this.etiqueta,
     required this.color,
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Icon(icon, color: color, size: 22),
-        const SizedBox(height: 6),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-            color: color,
-          ),
-        ),
-        Text(
-          label,
-          style: const TextStyle(
-            color: AppColors.textHint,
-            fontSize: 11,
-          ),
-        ),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => Column(
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(height: 7),
+          Text(valor,
+              style: const TextStyle(
+                  color: Colors.white, fontSize: 24, fontWeight: FontWeight.w800,
+                  fontFeatures: [FontFeature.tabularFigures()])),
+          const SizedBox(height: 2),
+          Text(etiqueta,
+              style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11.5, fontWeight: FontWeight.w600)),
+        ],
+      );
 }

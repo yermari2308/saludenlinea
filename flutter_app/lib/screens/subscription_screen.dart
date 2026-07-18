@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../app_theme.dart';
+import '../design_system.dart';
 import '../services/api_service.dart';
 
+/// Suscripciones — Design System 2.0. Plan activo como tarjeta de tinta con
+/// anillo de consumo; planes disponibles en tarjetas con precio tabular.
 class SubscriptionScreen extends StatefulWidget {
   const SubscriptionScreen({super.key});
 
@@ -32,7 +34,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       if (!mounted) return;
       final subData = results[0] as Map<String, dynamic>;
       setState(() {
-        _suscripcion = subData['activo'] == true ? subData['suscripcion'] as Map<String, dynamic>? : null;
+        _suscripcion = subData['activo'] == true
+            ? subData['suscripcion'] as Map<String, dynamic>?
+            : null;
         _planes = (results[1] as List).cast<Map<String, dynamic>>();
       });
     } catch (_) {
@@ -59,212 +63,183 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     }
   }
 
-  void _snack(String msg) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  void _snack(String msg) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(msg),
+        backgroundColor: DSColors.coral,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ));
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Planes de suscripción',
-            style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white)),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primaryLight))
-          : RefreshIndicator(
-              onRefresh: _load,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16),
+  Widget build(BuildContext context) => DSScreen(
+        title: 'Suscripciones',
+        subtitle: 'Consultas a precio fijo cada mes',
+        padding: EdgeInsets.zero,
+        child: _loading
+            ? const Padding(
+                padding: EdgeInsets.symmetric(vertical: DS.s6),
+                child: Center(child: CircularProgressIndicator(color: DSColors.brand)),
+              )
+            : Padding(
+                padding: const EdgeInsets.fromLTRB(DS.s3, DS.s4, DS.s3, DS.s3),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (_suscripcion != null) ...[
-                      _ActivePlanCard(sub: _suscripcion!),
-                      const SizedBox(height: 20),
+                      _PlanActivo(sub: _suscripcion!),
+                      const SizedBox(height: DS.s4),
                     ],
-                    const Text('Elige tu plan',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 20,
-                            color: AppColors.textPrimary)),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Accede a consultas con médicos certificados a precio fijo mensual.',
-                      style: TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 13,
-                          height: 1.4),
-                    ),
-                    const SizedBox(height: 16),
+                    const DSSectionHeader(title: 'Planes disponibles'),
                     ..._planes.map((p) => Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: _PlanCard(
+                          padding: const EdgeInsets.only(bottom: DS.s2),
+                          child: _TarjetaPlan(
                             plan: p,
-                            isActual: _suscripcion?['plan'] == p['id'],
+                            esActual: _suscripcion?['plan'] == p['id'],
                             onSuscribir: _subscribing
                                 ? null
                                 : () => _suscribir(p['id'] as String),
                           ),
                         )),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.cardBorder),
-                      ),
-                      child: const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.info_outline_rounded,
-                                  size: 16, color: AppColors.textHint),
-                              SizedBox(width: 8),
-                              Text('Información',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 13,
-                                      color: AppColors.textSecondary)),
-                            ],
-                          ),
-                          SizedBox(height: 8),
-                          _Bullet('El plan se activa inmediatamente tras el pago.'),
-                          _Bullet('Las consultas no usadas no se acumulan al siguiente mes.'),
-                          _Bullet('Puedes cancelar en cualquier momento desde el panel.'),
-                          _Bullet('Precio en dólares; tipo de cambio ₡ referencial.'),
+                    const SizedBox(height: DS.s2),
+                    const DSSectionHeader(title: 'Cómo funciona'),
+                    DSCard(
+                      child: Column(
+                        children: const [
+                          _Punto(Icons.bolt_rounded, 'El plan se activa al instante después del pago.'),
+                          _Punto(Icons.event_busy_rounded, 'Las consultas no usadas no se acumulan al mes siguiente.'),
+                          _Punto(Icons.cancel_outlined, 'Podés cancelar cuando querás desde tu perfil.'),
+                          _Punto(Icons.currency_exchange_rounded, 'Precio en dólares; el monto en colones es referencial.', ultimo: true),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
                   ],
                 ),
               ),
-            ),
-    );
-  }
+      );
 }
 
-class _ActivePlanCard extends StatelessWidget {
+/// Tarjeta de tinta del plan vigente, con anillo de consumo.
+class _PlanActivo extends StatelessWidget {
   final Map<String, dynamic> sub;
-  const _ActivePlanCard({required this.sub});
+  const _PlanActivo({required this.sub});
 
   @override
   Widget build(BuildContext context) {
     final usadas = sub['consultas_usadas'] as int? ?? 0;
     final incluidas = sub['consultas_incluidas'] as int? ?? 0;
     final restantes = sub['consultas_restantes'];
+    final ilimitado = incluidas == 0;
     final fin = sub['fin'] as String? ?? '';
     final finDate = fin.isNotEmpty ? DateTime.tryParse(fin) : null;
+    final pct = ilimitado ? 1.0 : (incluidas > 0 ? usadas / incluidas : 0.0);
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: AppTheme.primaryGradient,
-        borderRadius: BorderRadius.circular(16),
-      ),
+    return DSInkCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.verified_rounded, color: Colors.white, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                sub['nombre_plan'] as String? ?? sub['plan'] as String? ?? 'Plan activo',
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16),
+              const Icon(Icons.verified_rounded, color: DSColors.mint, size: 19),
+              const SizedBox(width: DS.s1),
+              Expanded(
+                child: Text(
+                  sub['nombre_plan'] as String? ?? sub['plan'] as String? ?? 'Plan activo',
+                  style: const TextStyle(
+                      color: Colors.white, fontSize: 16.5,
+                      fontWeight: FontWeight.w800, letterSpacing: -0.3),
+                ),
               ),
-              const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
+                  color: DSColors.mint.withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(100),
                 ),
                 child: const Text('ACTIVO',
                     style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.8)),
+                        color: DSColors.mint, fontSize: 10,
+                        fontWeight: FontWeight.w800, letterSpacing: 0.8)),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          if (incluidas == 0) ...[
-            const Text('Consultas ilimitadas',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800)),
-          ] else ...[
-            Text(
-              '$usadas de $incluidas consultas usadas',
-              style: TextStyle(
-                  color: Colors.white.withOpacity(0.9), fontSize: 13),
-            ),
-            const SizedBox(height: 6),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: incluidas > 0 ? usadas / incluidas : 0,
-                minHeight: 6,
-                backgroundColor: Colors.white.withOpacity(0.3),
-                valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+          const SizedBox(height: DS.s3),
+          Row(
+            children: [
+              DSProgressRing(
+                pct: pct,
+                color: DSColors.mint,
+                size: 76,
+                center: ilimitado
+                    ? const Icon(Icons.all_inclusive_rounded, color: Colors.white, size: 26)
+                    : Text('${restantes ?? 0}',
+                        style: const TextStyle(
+                            color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800,
+                            fontFeatures: [FontFeature.tabularFigures()])),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              restantes != null
-                  ? '$restantes consultas restantes'
-                  : 'Sin límite',
-              style: TextStyle(
-                  color: Colors.white.withOpacity(0.75), fontSize: 12),
-            ),
-          ],
-          if (finDate != null) ...[
-            const SizedBox(height: 12),
-            Text(
-              'Vence: ${finDate.day}/${finDate.month}/${finDate.year}',
-              style: TextStyle(
-                  color: Colors.white.withOpacity(0.75), fontSize: 12),
-            ),
-          ],
+              const SizedBox(width: DS.s3),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      ilimitado ? 'Consultas ilimitadas' : 'Consultas restantes',
+                      style: const TextStyle(
+                          color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      ilimitado
+                          ? 'Usá las que necesités este mes'
+                          : '$usadas de $incluidas usadas',
+                      style: TextStyle(
+                          color: Colors.white.withOpacity(0.6), fontSize: 12.5),
+                    ),
+                    if (finDate != null) ...[
+                      const SizedBox(height: DS.s1),
+                      Row(
+                        children: [
+                          Icon(Icons.event_rounded, size: 13, color: Colors.white.withOpacity(0.5)),
+                          const SizedBox(width: 5),
+                          Text(
+                            'Vence ${finDate.day}/${finDate.month}/${finDate.year}',
+                            style: TextStyle(
+                                color: Colors.white.withOpacity(0.5),
+                                fontSize: 11.5, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 }
 
-class _PlanCard extends StatelessWidget {
+/// Tarjeta de plan disponible.
+class _TarjetaPlan extends StatelessWidget {
   final Map<String, dynamic> plan;
-  final bool isActual;
+  final bool esActual;
   final VoidCallback? onSuscribir;
 
-  const _PlanCard({
+  const _TarjetaPlan({
     required this.plan,
-    required this.isActual,
+    required this.esActual,
     required this.onSuscribir,
   });
 
   Color get _color {
     switch (plan['id']) {
       case 'premium':
-        return AppColors.primaryLight;
+        return DSColors.brand;
       case 'ilimitado':
-        return AppColors.accentDark;
+        return DSColors.ink;
       default:
-        return const Color(0xFF16A34A);
+        return DSColors.mint;
     }
   }
 
@@ -276,122 +251,76 @@ class _PlanCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isActual ? _color : AppColors.cardBorder,
-          width: isActual ? 2 : 1,
-        ),
-        boxShadow: [AppTheme.cardShadow],
+        color: DSColors.surface,
+        borderRadius: DSRadius.rMd,
+        border: esActual ? Border.all(color: _color, width: 2) : null,
+        boxShadow: esActual ? DSElevation.float : DSElevation.rest,
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: _color.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    consultas == 0
-                        ? Icons.all_inclusive_rounded
-                        : Icons.medical_services_rounded,
-                    color: _color,
-                    size: 18,
-                  ),
+      padding: const EdgeInsets.all(DS.s2 + 2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40, height: 40,
+                decoration: BoxDecoration(
+                  color: _color.withOpacity(0.10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        plan['nombre'] as String? ?? '',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 15,
-                            color: isActual ? _color : AppColors.textPrimary),
-                      ),
-                      Text(
-                        plan['descripcion'] as String? ?? '',
-                        style: const TextStyle(
-                            fontSize: 12, color: AppColors.textSecondary),
-                      ),
-                    ],
-                  ),
-                ),
-                if (isActual)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: _color.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      'Activo',
-                      style: TextStyle(
-                          color: _color,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  '\$${usd.toStringAsFixed(2)}',
-                  style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w800,
-                      color: _color),
-                ),
-                const SizedBox(width: 4),
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 4),
-                  child: Text('/mes',
-                      style: TextStyle(
-                          fontSize: 13, color: AppColors.textSecondary)),
-                ),
-                const Spacer(),
-                Text(
-                  '≈ ₡${_formatCRC(crc)}/mes',
-                  style: const TextStyle(
-                      fontSize: 12, color: AppColors.textHint),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: isActual ? null : onSuscribir,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isActual ? AppColors.cardBorder : _color,
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: AppColors.cardBorder,
-                  disabledForegroundColor: AppColors.textHint,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                ),
-                child: Text(
-                  isActual ? 'Plan actual' : 'Suscribirme',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w700, fontSize: 14),
+                child: Icon(
+                  consultas == 0 ? Icons.all_inclusive_rounded : Icons.medical_services_rounded,
+                  color: _color, size: 20,
                 ),
               ),
-            ),
-          ],
-        ),
+              const SizedBox(width: DS.s1 + 4),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(plan['nombre'] as String? ?? '', style: DSText.headline),
+                    const SizedBox(height: 2),
+                    Text(plan['descripcion'] as String? ?? '',
+                        style: DSText.body.copyWith(fontSize: 12.5)),
+                  ],
+                ),
+              ),
+              if (esActual) DSChip(label: 'Actual', color: _color),
+            ],
+          ),
+          const SizedBox(height: DS.s2),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text('\$${usd.toStringAsFixed(2)}',
+                  style: DSText.mono.copyWith(color: _color, fontSize: 28)),
+              const Padding(
+                padding: EdgeInsets.only(bottom: 5, left: 3),
+                child: Text('/mes', style: TextStyle(fontSize: 13, color: DSColors.textMid, fontWeight: FontWeight.w600)),
+              ),
+              const Spacer(),
+              Text('≈ ₡${_formatCRC(crc)}',
+                  style: const TextStyle(
+                      fontSize: 12.5, color: DSColors.textFaint, fontWeight: FontWeight.w600,
+                      fontFeatures: [FontFeature.tabularFigures()])),
+            ],
+          ),
+          const SizedBox(height: DS.s2),
+          if (esActual)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                color: DSColors.canvas,
+                borderRadius: BorderRadius.circular(100),
+              ),
+              child: const Center(
+                child: Text('Tu plan actual',
+                    style: TextStyle(color: DSColors.textFaint, fontSize: 14, fontWeight: FontWeight.w700)),
+              ),
+            )
+          else
+            DSButton(label: 'Suscribirme', color: _color, onTap: onSuscribir),
+        ],
       ),
     );
   }
@@ -407,24 +336,25 @@ class _PlanCard extends StatelessWidget {
   }
 }
 
-class _Bullet extends StatelessWidget {
-  final String text;
-  const _Bullet(this.text);
+/// Fila informativa con ícono.
+class _Punto extends StatelessWidget {
+  final IconData icon;
+  final String texto;
+  final bool ultimo;
+  const _Punto(this.icon, this.texto, {this.ultimo = false});
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 4),
+        padding: EdgeInsets.only(bottom: ultimo ? 0 : DS.s2),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('• ',
-                style: TextStyle(color: AppColors.textHint, fontSize: 13)),
+            Icon(icon, size: 17, color: DSColors.textFaint),
+            const SizedBox(width: DS.s1 + 2),
             Expanded(
-              child: Text(text,
+              child: Text(texto,
                   style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                      height: 1.4)),
+                      fontSize: 12.5, color: DSColors.textMid, height: 1.45, fontWeight: FontWeight.w500)),
             ),
           ],
         ),
