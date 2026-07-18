@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
+import '../design_system.dart';
 import '../services/api_service.dart';
 
 class MedicalRecordScreen extends StatefulWidget {
@@ -32,93 +33,133 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
 
   int get _completitud => (_record?['completitud_pct'] as int?) ?? 0;
 
+  /// Color semántico según el avance del expediente.
+  Color get _colorAvance => _completitud >= 80
+      ? DSColors.mint
+      : _completitud >= 40
+          ? const Color(0xFFF59E0B)
+          : DSColors.coral;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primaryLight))
-          : _error != null
-              ? _buildError()
-              : CustomScrollView(
-                  slivers: [
-                    _buildHeader(),
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-                      sliver: SliverList(
-                        delegate: SliverChildListDelegate(_buildSecciones()),
-                      ),
-                    ),
-                  ],
-                ),
+      backgroundColor: DSColors.ink,
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: DSColors.canvas,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(DSRadius.lg)),
+              ),
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator(color: DSColors.brand))
+                  : _error != null
+                      ? _buildError()
+                      : ListView(
+                          padding: const EdgeInsets.fromLTRB(DS.s3, DS.s3, DS.s3, DS.s5),
+                          children: _buildSecciones(),
+                        ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
+  /// Encabezado de tinta con anillo de completitud y serie del expediente.
   Widget _buildHeader() {
-    return SliverAppBar(
-      expandedHeight: 160,
-      pinned: true,
-      backgroundColor: AppColors.primary,
-      foregroundColor: Colors.white,
-      title: const Text('Expediente clínico',
-          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-      flexibleSpace: FlexibleSpaceBar(
-        background: Container(
-          decoration: AppTheme.gradientBox,
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                crossAxisAlignment: CrossAxisAlignment.start,
+    final serie = _record?['id'] != null
+        ? 'EXP-${_record!['id'].toString().padLeft(6, '0')}'
+        : null;
+
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [DSColors.ink, DSColors.inkSoft],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(DS.s2, DS.s2, DS.s3, DS.s3),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      const Text('Completitud global',
-                          style: TextStyle(color: Colors.white70, fontSize: 13)),
-                      const Spacer(),
-                      Text(
-                        '$_completitud%',
-                        style: TextStyle(
-                          color: _completitud >= 80
-                              ? AppColors.accent
-                              : _completitud >= 40
-                                  ? const Color(0xFFF59E0B)
-                                  : Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                        ),
+                  DSPressable(
+                    onTap: () => Navigator.maybePop(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(9),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.12),
+                        shape: BoxShape.circle,
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: LinearProgressIndicator(
-                      value: _completitud / 100,
-                      minHeight: 8,
-                      backgroundColor: Colors.white.withOpacity(0.2),
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        _completitud >= 80
-                            ? AppColors.accent
-                            : _completitud >= 40
-                                ? const Color(0xFFF59E0B)
-                                : AppColors.error,
-                      ),
+                      child: const Icon(Icons.arrow_back_rounded,
+                          color: Colors.white, size: 20),
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    _completitud < 40
-                        ? 'Completa tu expediente para consultas más precisas'
-                        : _completitud < 80
-                            ? 'Buen avance — agrega más datos para mayor precisión'
-                            : 'Expediente casi completo',
-                    style: const TextStyle(color: Colors.white60, fontSize: 11),
+                  const Spacer(),
+                  if (serie != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(100),
+                      ),
+                      child: Text(serie,
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 11,
+                              fontWeight: FontWeight.w800, letterSpacing: 0.6,
+                              fontFeatures: [FontFeature.tabularFigures()])),
+                    ),
+                ],
+              ),
+              const SizedBox(height: DS.s2),
+              Row(
+                children: [
+                  DSProgressRing(
+                    pct: _completitud / 100,
+                    color: _colorAvance,
+                    size: 72,
+                    center: Text('$_completitud%',
+                        style: const TextStyle(
+                            color: Colors.white, fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            fontFeatures: [FontFeature.tabularFigures()])),
+                  ),
+                  const SizedBox(width: DS.s3),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Expediente clínico',
+                            style: TextStyle(
+                                color: Colors.white, fontSize: 21,
+                                fontWeight: FontWeight.w800, letterSpacing: -0.5)),
+                        const SizedBox(height: 5),
+                        Text(
+                          _completitud < 40
+                              ? 'Completalo para consultas más precisas'
+                              : _completitud < 80
+                                  ? 'Buen avance — agregá más datos'
+                                  : 'Expediente casi completo',
+                          style: TextStyle(
+                              color: Colors.white.withOpacity(0.6),
+                              fontSize: 12.5, height: 1.4),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
-            ),
+            ],
           ),
         ),
       ),
@@ -257,29 +298,15 @@ class _MedicalRecordScreenState extends State<MedicalRecordScreen> {
     }
   }
 
-  Widget _buildError() => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline_rounded, size: 48, color: AppColors.error),
-              const SizedBox(height: 16),
-              Text(_error ?? 'Error',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.textSecondary)),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _load,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryLight,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: const Text('Reintentar'),
-              ),
-            ],
-          ),
+  Widget _buildError() => DSEmpty(
+        icon: Icons.cloud_off_rounded,
+        color: DSColors.coral,
+        title: 'No pudimos cargar tu expediente',
+        message: _error ?? 'Revisá tu conexión e intentá de nuevo.',
+        action: DSButton(
+          label: 'Reintentar',
+          icon: Icons.refresh_rounded,
+          onTap: _load,
         ),
       );
 }
@@ -376,12 +403,9 @@ class _SeccionCardState extends State<_SeccionCard> {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border(
-          left: BorderSide(color: widget.config.color, width: 3),
-        ),
-        boxShadow: [AppTheme.cardShadow],
+        color: DSColors.surface,
+        borderRadius: DSRadius.rMd,
+        boxShadow: _expanded ? DSElevation.float : DSElevation.rest,
       ),
       child: Column(
         children: [
@@ -390,19 +414,20 @@ class _SeccionCardState extends State<_SeccionCard> {
             onTap: () => setState(() => _expanded = !_expanded),
             behavior: HitTestBehavior.opaque,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+              padding: const EdgeInsets.fromLTRB(DS.s2, DS.s2, DS.s2, 14),
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    width: 38,
+                    height: 38,
                     decoration: BoxDecoration(
-                      color: widget.config.color.withOpacity(0.1),
-                      shape: BoxShape.circle,
+                      color: widget.config.color.withOpacity(0.10),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(widget.config.icono,
-                        color: widget.config.color, size: 18),
+                        color: widget.config.color, size: 19),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: DS.s1 + 4),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -459,12 +484,13 @@ class _SeccionCardState extends State<_SeccionCard> {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Icon(
-                    _expanded
-                        ? Icons.keyboard_arrow_up_rounded
-                        : Icons.keyboard_arrow_down_rounded,
-                    color: AppColors.textHint,
+                  const SizedBox(width: DS.s1),
+                  AnimatedRotation(
+                    turns: _expanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                    child: const Icon(Icons.keyboard_arrow_down_rounded,
+                        color: DSColors.textFaint),
                   ),
                 ],
               ),

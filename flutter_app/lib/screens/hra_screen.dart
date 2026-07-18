@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
+import '../design_system.dart';
 import '../services/api_service.dart';
 import 'doctors_screen.dart';
 
@@ -68,25 +69,50 @@ class _HraScreenState extends State<HraScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Evaluación de salud',
-            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          if (_resultado != null)
-            TextButton(
-              onPressed: () => setState(() => _resultado = null),
-              child: const Text('Repetir',
-                  style: TextStyle(color: Colors.white70, fontSize: 13)),
+      backgroundColor: DSColors.ink,
+      body: Column(
+        children: [
+          DSInkHeader(
+            title: 'Evaluación de salud',
+            subtitle: _resultado != null
+                ? 'Tus resultados'
+                : 'Contestá para conocer tus riesgos',
+            trailing: _resultado == null
+                ? null
+                : DSPressable(
+                    onTap: () => setState(() => _resultado = null),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(100),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.refresh_rounded, size: 14, color: Colors.white),
+                          SizedBox(width: 5),
+                          Text('Repetir',
+                              style: TextStyle(
+                                  color: Colors.white, fontSize: 12,
+                                  fontWeight: FontWeight.w700)),
+                        ],
+                      ),
+                    ),
+                  ),
+          ),
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: DSColors.canvas,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(DSRadius.lg)),
+              ),
+              child: _resultado != null ? _buildResultados() : _buildCuestionario(),
             ),
+          ),
         ],
       ),
-      body: _resultado != null
-          ? _buildResultados()
-          : _buildCuestionario(),
     );
   }
 
